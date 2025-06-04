@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import * as tulind from 'tulind';
+import { InsufficientDataException } from './exceptions/insufficient-data.exception';
 
 @Injectable()
 export class IndicatorsService {
   constructor() {}
 
   async calculateRSI(prices: number[], period: number = 14): Promise<number[]> {
+    const MIN_REQUIRED_LENGTH = 100;
+
+    if (prices.length < MIN_REQUIRED_LENGTH) {
+      throw new InsufficientDataException(MIN_REQUIRED_LENGTH, prices.length);
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.rsi.indicator([prices], [period], (err, results) => {
         if (err) reject(err);
