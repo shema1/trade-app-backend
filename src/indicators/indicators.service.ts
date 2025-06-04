@@ -21,12 +21,21 @@ export class IndicatorsService {
     });
   }
 
+  //   Для короткострокового аналізу: 100-150 елементів
+  // Для середньострокового аналізу: 150-200 елементів
+  // Для довгострокового аналізу: 200+ елементів
   async calculateMACD(
     prices: number[],
     fastPeriod: number = 12,
     slowPeriod: number = 26,
     signalPeriod: number = 9,
   ): Promise<{ macd: number[]; signal: number[]; histogram: number[] }> {
+    const MIN_REQUIRED_LENGTH = 100;
+
+    if (prices.length < 100) {
+      throw new InsufficientDataException(MIN_REQUIRED_LENGTH, prices.length);
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.macd.indicator(
         [prices],
