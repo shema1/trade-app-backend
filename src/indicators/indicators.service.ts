@@ -10,7 +10,13 @@ export class IndicatorsService {
     const MIN_REQUIRED_LENGTH = 100;
 
     if (prices.length < MIN_REQUIRED_LENGTH) {
-      throw new InsufficientDataException(MIN_REQUIRED_LENGTH, prices.length);
+      throw new InsufficientDataException(
+        'RSI',
+        'calculateRSI',
+        MIN_REQUIRED_LENGTH,
+        prices.length,
+        'Для точного розрахунку RSI рекомендується використовувати більше 100 елементів.',
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -21,7 +27,7 @@ export class IndicatorsService {
     });
   }
 
-  //   Для короткострокового аналізу: 100-150 елементів
+  // Для короткострокового аналізу: 100-150 елементів
   // Для середньострокового аналізу: 150-200 елементів
   // Для довгострокового аналізу: 200+ елементів
   async calculateMACD(
@@ -32,8 +38,14 @@ export class IndicatorsService {
   ): Promise<{ macd: number[]; signal: number[]; histogram: number[] }> {
     const MIN_REQUIRED_LENGTH = 100;
 
-    if (prices.length < 100) {
-      throw new InsufficientDataException(MIN_REQUIRED_LENGTH, prices.length);
+    if (prices.length < MIN_REQUIRED_LENGTH) {
+      throw new InsufficientDataException(
+        'MACD',
+        'calculateMACD',
+        MIN_REQUIRED_LENGTH,
+        prices.length,
+        'Для точного розрахунку MACD рекомендується використовувати 100-200 елементів.',
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -66,6 +78,18 @@ export class IndicatorsService {
     period: number = 20,
     stddev: number = 2,
   ): Promise<{ upper: number[]; middle: number[]; lower: number[] }> {
+    const MIN_REQUIRED_LENGTH = 100;
+
+    if (prices.length < MIN_REQUIRED_LENGTH) {
+      throw new InsufficientDataException(
+        'Bollinger Bands',
+        'calculateBollingerBands',
+        MIN_REQUIRED_LENGTH,
+        prices.length,
+        'Для точного розрахунку Bollinger Bands рекомендується використовувати більше 100 елементів.',
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.bbands.indicator(
         [prices],
