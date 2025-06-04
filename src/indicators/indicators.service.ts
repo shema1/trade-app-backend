@@ -7,7 +7,7 @@ export class IndicatorsService {
   constructor() {}
 
   async calculateRSI(prices: number[], period: number = 14): Promise<number[]> {
-    const MIN_REQUIRED_LENGTH = 100;
+    const MIN_REQUIRED_LENGTH = period + 1;
 
     if (prices.length < MIN_REQUIRED_LENGTH) {
       throw new InsufficientDataException(
@@ -36,7 +36,7 @@ export class IndicatorsService {
     slowPeriod: number = 26,
     signalPeriod: number = 9,
   ): Promise<{ macd: number[]; signal: number[]; histogram: number[] }> {
-    const MIN_REQUIRED_LENGTH = 100;
+    const MIN_REQUIRED_LENGTH = slowPeriod + 1;
 
     if (prices.length < MIN_REQUIRED_LENGTH) {
       throw new InsufficientDataException(
@@ -65,7 +65,7 @@ export class IndicatorsService {
   }
 
   async calculateEMA(prices: number[], period: number = 14): Promise<number[]> {
-    const MIN_REQUIRED_LENGTH = 100;
+    const MIN_REQUIRED_LENGTH = period + 1;
 
     if (prices.length < MIN_REQUIRED_LENGTH) {
       throw new InsufficientDataException(
@@ -90,7 +90,7 @@ export class IndicatorsService {
     period: number = 20,
     stddev: number = 2,
   ): Promise<{ upper: number[]; middle: number[]; lower: number[] }> {
-    const MIN_REQUIRED_LENGTH = 100;
+    const MIN_REQUIRED_LENGTH = period + 1;
 
     if (prices.length < MIN_REQUIRED_LENGTH) {
       throw new InsufficientDataException(
@@ -98,7 +98,7 @@ export class IndicatorsService {
         'calculateBollingerBands',
         MIN_REQUIRED_LENGTH,
         prices.length,
-        'Для точного розрахунку Bollinger Bands рекомендується використовувати більше 100 елементів.',
+        `Для точного розрахунку Bollinger Bands рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
       );
     }
 
@@ -125,6 +125,22 @@ export class IndicatorsService {
     kPeriod: number = 14,
     dPeriod: number = 3,
   ): Promise<{ k: number[]; d: number[] }> {
+    const MIN_REQUIRED_LENGTH = kPeriod + 1;
+
+    if (
+      high.length < MIN_REQUIRED_LENGTH ||
+      low.length < MIN_REQUIRED_LENGTH ||
+      close.length < MIN_REQUIRED_LENGTH
+    ) {
+      throw new InsufficientDataException(
+        'Stochastic',
+        'calculateStochastic',
+        MIN_REQUIRED_LENGTH,
+        high.length,
+        `Для точного розрахунку Stochastic рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.stoch.indicator(
         [high, low, close],
@@ -141,6 +157,18 @@ export class IndicatorsService {
   }
 
   async calculateSMA(prices: number[], period: number = 14): Promise<number[]> {
+    const MIN_REQUIRED_LENGTH = period + 1;
+
+    if (prices.length < MIN_REQUIRED_LENGTH) {
+      throw new InsufficientDataException(
+        'SMA',
+        'calculateSMA',
+        MIN_REQUIRED_LENGTH,
+        prices.length,
+        `Для точного розрахунку SMA рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.sma.indicator([prices], [period], (err, results) => {
         if (err) reject(err);
@@ -155,6 +183,22 @@ export class IndicatorsService {
     close: number[],
     period: number = 14,
   ): Promise<number[]> {
+    const MIN_REQUIRED_LENGTH = period + 1;
+
+    if (
+      high.length < MIN_REQUIRED_LENGTH ||
+      low.length < MIN_REQUIRED_LENGTH ||
+      close.length < MIN_REQUIRED_LENGTH
+    ) {
+      throw new InsufficientDataException(
+        'ADX',
+        'calculateADX',
+        MIN_REQUIRED_LENGTH,
+        high.length,
+        `Для точного розрахунку ADX рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.adx.indicator(
         [high, low, close],
@@ -173,6 +217,22 @@ export class IndicatorsService {
     close: number[],
     period: number = 14,
   ): Promise<number[]> {
+    const MIN_REQUIRED_LENGTH = period + 1;
+
+    if (
+      high.length < MIN_REQUIRED_LENGTH ||
+      low.length < MIN_REQUIRED_LENGTH ||
+      close.length < MIN_REQUIRED_LENGTH
+    ) {
+      throw new InsufficientDataException(
+        'ATR',
+        'calculateATR',
+        MIN_REQUIRED_LENGTH,
+        high.length,
+        `Для точного розрахунку ATR рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.atr.indicator(
         [high, low, close],
