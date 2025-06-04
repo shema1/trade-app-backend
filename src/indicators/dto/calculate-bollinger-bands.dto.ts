@@ -1,31 +1,59 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CalculateBollingerBandsDto {
   @ApiProperty({
-    description: 'Масив цін для розрахунку Bollinger Bands',
-    example: [
-      48000.0, 48250.0, 48120.0, 48380.0, 48450.0, 48600.0, 48500.0, 48750.0,
-      48800.0, 48950.0, 48800.0, 49000.0, 49150.0, 49200.0, 49100.0, 49300.0,
-      49450.0, 49500.0, 49600.0, 49750.0, 49600.0, 49550.0, 49680.0, 49800.0,
-      49900.0,
-    ],
+    description: 'Масив цін для розрахунку смуг Боллінджера',
     type: [Number],
+    example: [48000.0, 48250.0, 48120.0, 48380.0, 48450.0, 48600.0, 48500.0],
+    minItems: 100,
   })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @MinLength(100)
   prices: number[];
 
   @ApiProperty({
-    description: 'Період для розрахунку (за замовчуванням 20)',
-    example: 20,
-    required: false,
+    description: `Період для розрахунку ковзної середньої.
+    - Визначає період для розрахунку SMA
+    - Більший період дає більш плавні смуги, але з більшою затримкою
+    - Стандартне значення 20 добре працює для більшості випадків
+    - Рекомендований діапазон: 10-50`,
     type: Number,
+    default: 20,
+    minimum: 10,
+    maximum: 50,
+    example: 20,
   })
-  period?: number;
+  @IsNumber()
+  @Min(10)
+  @Max(50)
+  @IsOptional()
+  period?: number = 20;
 
   @ApiProperty({
-    description: 'Кількість стандартних відхилень (за замовчуванням 2)',
-    example: 2,
-    required: false,
+    description: `Множник стандартного відхилення.
+    - Визначає ширину смуг
+    - Більше значення = ширші смуги
+    - Менше значення = вужчі смуги
+    - Стандартне значення 2 охоплює ~95% цінових рухів
+    - Рекомендований діапазон: 1.5-3`,
     type: Number,
+    default: 2,
+    minimum: 1.5,
+    maximum: 3,
+    example: 2,
   })
-  stddev?: number;
+  @IsNumber()
+  @Min(1.5)
+  @Max(3)
+  @IsOptional()
+  stddev?: number = 2;
 }
