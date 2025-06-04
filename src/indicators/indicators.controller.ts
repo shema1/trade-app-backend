@@ -6,6 +6,7 @@ import { CalculateMACDDto } from './dto/calculate-macd.dto';
 import { CalculateBollingerBandsDto } from './dto/calculate-bollinger-bands.dto';
 import { CalculateStochasticDto } from './dto/calculate-stochastic.dto';
 import { CalculateVWAPDto } from './dto/calculate-vwap.dto';
+import { CalculateEMADto } from './dto/calculate-ema.dto';
 
 @ApiTags('indicators')
 @Controller('indicators')
@@ -121,6 +122,79 @@ export class IndicatorsController {
       dto.signalPeriod,
     );
     return macd;
+  }
+
+  @Post('ema')
+  @ApiOperation({
+    summary: 'Розрахувати EMA (Exponential Moving Average)',
+    description: `Розраховує експоненціальну ковзну середню (EMA).
+    
+    Особливості розрахунку:
+    - EMA надає більшу вагу останнім цінам, ніж SMA
+    - Чим менший період, тим швидше EMA реагує на зміни ціни
+    - Чим більший період, тим більш плавна лінія, але з більшою затримкою
+    
+    Рекомендації щодо використання:
+    - Короткостроковий аналіз: період 5-10
+    - Середньостроковий аналіз: період 10-20
+    - Довгостроковий аналіз: період 20-50
+    
+    Для точного розрахунку рекомендується використовувати не менше 100 елементів.`,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Успішно розраховано EMA',
+    schema: {
+      type: 'object',
+      properties: {
+        ema: {
+          type: 'array',
+          items: { type: 'number' },
+          description:
+            'Масив значень EMA. Кожне значення представляє експоненціальну ковзну середню для відповідного періоду.',
+          example: [
+            48000.0, 48100.0, 48150.0, 48200.0, 48250.0, 48300.0, 48350.0,
+          ],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Помилка вхідних даних',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'number', example: 400 },
+        error: { type: 'string', example: 'Insufficient Data' },
+        message: {
+          type: 'string',
+          example:
+            'Помилка в функції calculateEMA: Для розрахунку EMA потрібно мінімум 100 елементів. Надано 50 елементів. Для точного розрахунку рекомендується використовувати більше 100 елементів.',
+        },
+        details: {
+          type: 'object',
+          properties: {
+            indicator: { type: 'string', example: 'EMA' },
+            function: { type: 'string', example: 'calculateEMA' },
+            requiredLength: { type: 'number', example: 100 },
+            actualLength: { type: 'number', example: 50 },
+            additionalInfo: {
+              type: 'string',
+              example:
+                'Для точного розрахунку рекомендується використовувати більше 100 елементів.',
+            },
+          },
+        },
+      },
+    },
+  })
+  async calculateEMA(@Body() dto: CalculateEMADto) {
+    const ema = await this.indicatorsService.calculateEMA(
+      dto.prices,
+      dto.period,
+    );
+    return { ema };
   }
 
   @Post('bollinger-bands')

@@ -15,7 +15,7 @@ export class IndicatorsService {
         'calculateRSI',
         MIN_REQUIRED_LENGTH,
         prices.length,
-        'Для точного розрахунку RSI рекомендується використовувати більше 100 елементів.',
+        `Для точного розрахунку RSI рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
       );
     }
 
@@ -44,7 +44,7 @@ export class IndicatorsService {
         'calculateMACD',
         MIN_REQUIRED_LENGTH,
         prices.length,
-        'Для точного розрахунку MACD рекомендується використовувати 100-200 елементів.',
+        `Для точного розрахунку MACD рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
       );
     }
 
@@ -65,6 +65,18 @@ export class IndicatorsService {
   }
 
   async calculateEMA(prices: number[], period: number = 14): Promise<number[]> {
+    const MIN_REQUIRED_LENGTH = 100;
+
+    if (prices.length < MIN_REQUIRED_LENGTH) {
+      throw new InsufficientDataException(
+        'EMA',
+        'calculateEMA',
+        MIN_REQUIRED_LENGTH,
+        prices.length,
+        `Для точного розрахунку EMA рекомендується використовувати більше ${MIN_REQUIRED_LENGTH} елементів.`,
+      );
+    }
+
     return new Promise((resolve, reject) => {
       tulind.indicators.ema.indicator([prices], [period], (err, results) => {
         if (err) reject(err);
