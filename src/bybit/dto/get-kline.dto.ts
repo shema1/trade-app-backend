@@ -8,6 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { KlineIntervalV3 } from 'bybit-api';
+import { Transform } from 'class-transformer';
 
 export enum KlineCategory {
   SPOT = 'spot',
@@ -53,12 +54,13 @@ export class GetKlineDto {
     description: 'Кількість клін для отримання (макс. 1000)',
     default: 200,
     required: false,
-    example: 100,
+    example: 200,
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
   @Max(1000)
+  @Transform(({ value }) => Number(value))
   limit?: number;
 
   @ApiProperty({
@@ -68,4 +70,26 @@ export class GetKlineDto {
   })
   @IsEnum(KlineCategory)
   category: KlineCategory;
+
+  @ApiProperty({
+    description: 'Дата початку (наприклад, 1717737600000)',
+    default: 1717737600000,
+    example: 1717737600000,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  start?: number;
+
+  @ApiProperty({
+    description: 'Дата кінця (наприклад, 1717737600000)',
+    default: 1717737600000,
+    example: 1717737600000,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  end?: number;
 }
