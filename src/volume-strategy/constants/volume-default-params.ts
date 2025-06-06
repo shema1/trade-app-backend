@@ -11,6 +11,7 @@ export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
     strategyType: StrategyType.VOLUME_ANALYSIS,
     // name: 'aaa',
     params: {
+      name: 'Volume 1',
       interval: KlineInterval.ONE_MINUTE,
       minVolumeRatio: 3.5,
       minConfidence: MIN_CONFIDENCE,
@@ -20,6 +21,7 @@ export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.VOLUME_ANALYSIS,
     params: {
+      name: 'Volume 2',
       interval: KlineInterval.THREE_MINUTES,
       minVolumeRatio: 2.5,
       minConfidence: MIN_CONFIDENCE,

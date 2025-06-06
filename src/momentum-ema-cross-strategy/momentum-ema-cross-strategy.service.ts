@@ -43,6 +43,7 @@ export class MomentumEmaCrossStrategyService {
         trendOnly = DEFAULT_STRATEGY_PARAMS.trendOnly,
         dynamicAtrFilter = DEFAULT_STRATEGY_PARAMS.dynamicAtrFilter,
         category = DEFAULT_STRATEGY_PARAMS.category,
+        name = DEFAULT_STRATEGY_PARAMS.name,
       } = params;
 
       const klineData = kline?.length
@@ -158,6 +159,7 @@ export class MomentumEmaCrossStrategyService {
       }
 
       return {
+        name,
         symbol,
         strategyType: StrategyType.MOMENTUM_EMA_CROSS,
         recommendation,
@@ -213,6 +215,7 @@ export class MomentumEmaCrossStrategyService {
   ): AnalysisResult {
     return {
       symbol,
+      name: params.name,
       strategyType: StrategyType.MOMENTUM_EMA_CROSS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,

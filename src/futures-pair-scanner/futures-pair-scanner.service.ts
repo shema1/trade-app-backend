@@ -107,6 +107,11 @@ export class FuturesPairScannerService {
     kline: KlineDataItemBatch,
   ): Promise<AnalysisResult | null> {
     try {
+      if (!kline?.list?.length) {
+        this.logger.warn(`No kline data for ${kline.symbol}`);
+        return null;
+      }
+
       if (item.strategyType === StrategyType.MOMENTUM_EMA_CROSS) {
         const params = item.params as MomentumEmaStrategyItem;
         return await this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy(
@@ -125,11 +130,13 @@ export class FuturesPairScannerService {
             dynamicAtrFilter: params.dynamicAtrFilter,
             confidenceValue: params.confidenceValue,
             category: kline.category as KlineCategory,
+            name: params.name,
           },
         );
       } else if (item.strategyType === StrategyType.VOLUME_ANALYSIS) {
         const params = item.params as VolumeStrategyItem;
         return await this.volumeStrategyService.analyzeVolume({
+          name: params.name,
           symbol: kline.symbol,
           interval: item.params.interval,
           kline: kline.list,
@@ -142,7 +149,7 @@ export class FuturesPairScannerService {
       return null;
     } catch (error) {
       this.logger.error(
-        `Error in getStrategyResult for ${kline.symbol}:`,
+        `Error in getStrategyResult for ${kline.symbol} with strategy ${item.strategyType}:`,
         error,
       );
       return null;
@@ -154,25 +161,39 @@ export class FuturesPairScannerService {
     kline: KlineDataItemBatch,
   ): Promise<AnalysisResult[]> {
     try {
+      if (!items?.length) {
+        this.logger.warn('No strategies provided for check');
+        return [];
+      }
+
       const strategyPromises = items.map((item) =>
         this.getStrategyResult(item, kline),
       );
-      const results = await Promise.all(strategyPromises);
-      return results.filter(
-        (result): result is AnalysisResult => result !== null,
-      );
+      const results = await Promise.allSettled(strategyPromises);
+
+      return results
+        .filter(
+          (result): result is PromiseFulfilledResult<AnalysisResult | null> =>
+            result.status === 'fulfilled' && result.value !== null,
+        )
+        .map((result) => result.value);
     } catch (error) {
       this.logger.error(`Error in checkStrategies for ${kline.symbol}:`, error);
       return [];
     }
   }
 
-  async runAnalysis(): Promise<any> {
+  async runAnalysis(): Promise<AnalysisResult[]> {
     try {
       const strategies = [
         ...DEFAULT_STRATEGY_PARAMS_TEST,
         ...VOLUME_DEFAULT_STRATEGY_PARAMS_TEST,
       ];
+
+      if (!strategies.length) {
+        this.logger.warn('No strategies configured for analysis');
+        return [];
+      }
 
       const grouped = groupBy(strategies, 'params.interval');
       const analysisPromises = map(
@@ -186,7 +207,8 @@ export class FuturesPairScannerService {
               limit: 500,
             });
 
-            if (!kline.length) {
+            if (!kline?.length) {
+              this.logger.warn(`No kline data for interval ${key}`);
               return null;
             }
 
@@ -194,7 +216,14 @@ export class FuturesPairScannerService {
               this.checkStrategies(items, klineItem),
             );
 
-            return await Promise.all(batchPromises);
+            const batchResults = await Promise.allSettled(batchPromises);
+            return batchResults
+              .filter(
+                (result): result is PromiseFulfilledResult<AnalysisResult[]> =>
+                  result.status === 'fulfilled',
+              )
+              .map((result) => result.value)
+              .flat();
           } catch (error) {
             this.logger.error(`Error processing interval ${key}:`, error);
             return null;
@@ -202,11 +231,17 @@ export class FuturesPairScannerService {
         },
       );
 
-      const results = await Promise.all(analysisPromises);
-      const a = flattenDeep(
-        results.filter((item): item is any[] => item !== null),
+      const results = await Promise.allSettled(analysisPromises);
+      const flattenedResults = flattenDeep(
+        results
+          .filter(
+            (result): result is PromiseFulfilledResult<AnalysisResult[]> =>
+              result.status === 'fulfilled' && result.value !== null,
+          )
+          .map((result) => result.value),
       );
-      return a.filter((item) => item.confidence > 0);
+
+      return flattenedResults.filter((item) => item?.confidence > 0);
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];

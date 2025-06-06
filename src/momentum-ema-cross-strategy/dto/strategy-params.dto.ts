@@ -80,6 +80,14 @@ export class MomentumEmaStrategyParamsDto {
   @IsEnum(KlineCategory)
   @IsOptional()
   category: KlineCategory;
+
+  @ApiProperty({
+    example: 'Momentum EMA Cross 1',
+    default: 'Momentum EMA Cross 1',
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 }
 
 export const DEFAULT_STRATEGY_PARAMS = {
@@ -94,4 +102,5 @@ export const DEFAULT_STRATEGY_PARAMS = {
   confidenceValue: 0.75,
   limit: 50,
   category: KlineCategory.LINEAR,
+  name: 'Momentum EMA Cross 1',
 };

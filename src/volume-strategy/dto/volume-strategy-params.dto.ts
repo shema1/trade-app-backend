@@ -11,6 +11,11 @@ import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import { KlineDataItem } from 'src/bybit/interfaces/responses.interface';
 
 export class VolumeStrategyParamsDto {
+  @ApiProperty({ example: 'Volume 1', default: 'Volume 1' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
   @ApiProperty({ example: 'BTCUSDT', default: 'BTCUSDT' })
   @IsString()
   @IsNotEmpty()

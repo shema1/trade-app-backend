@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BybitService } from 'src/bybit/bybit.service';
 import { IndicatorsService } from 'src/indicators/indicators.service';
-import { VolumeStrategyParamsDto } from './dto/volume-strategy-params';
+import { VolumeStrategyParamsDto } from './dto/volume-strategy-params.dto';
 import {
   AnalysisResult,
   AnalysisResultRecommendation,
@@ -14,6 +14,7 @@ const VOLUME_DEFAULT_STRATEGY_PARAMS = {
   minVolumeRatio: 2.5,
   minConfidence: 0.75,
   limit: 50,
+  name: 'Volume 1',
 };
 
 @Injectable()
@@ -29,6 +30,7 @@ export class VolumeStrategyService {
     try {
       const {
         symbol,
+        name = VOLUME_DEFAULT_STRATEGY_PARAMS.name,
         interval,
         kline,
         minVolumeRatio = VOLUME_DEFAULT_STRATEGY_PARAMS.minVolumeRatio,
@@ -122,6 +124,7 @@ export class VolumeStrategyService {
 
       return {
         symbol,
+        name,
         strategyType: StrategyType.VOLUME_ANALYSIS,
         recommendation,
         confidence,
@@ -178,6 +181,7 @@ export class VolumeStrategyService {
   ): AnalysisResult {
     return {
       symbol,
+      name: params.name,
       strategyType: StrategyType.VOLUME_ANALYSIS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,
