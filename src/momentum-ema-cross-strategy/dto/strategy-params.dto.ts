@@ -22,7 +22,7 @@ export class MomentumEmaStrategyParamsDto {
   @IsNotEmpty()
   interval: KlineInterval;
 
-  @ApiProperty({ example: [], default: [] })
+  @ApiProperty({ example: [], default: [], required: false })
   @IsArray()
   @IsOptional()
   kline: KlineDataItem[];

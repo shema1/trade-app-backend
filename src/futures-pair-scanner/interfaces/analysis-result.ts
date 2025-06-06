@@ -30,3 +30,8 @@ export interface AnalysisResult {
   // lostProfitInfo?: LostProfitInfo;
   // done?: boolean;
 }
+
+export interface FuturesPairStrategy {
+  strategyType: StrategyType;
+  params: MomentumEmaStrategyParamsDto;
+}

@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { AnalysisResult } from '../interfaces/analysis-result';
+import {
+  AnalysisResult,
+  FuturesPairStrategy,
+} from '../interfaces/analysis-result';
 
 export enum FuturesPairStatus {
   ACTIVE = 'ACTIVE',
@@ -18,8 +21,8 @@ export class FuturesPair extends Document {
   // @Prop({ type: Object, required: true })
   // params: FuturesPairParams;
 
-  // @Prop({ type: Array, required: true })
-  // strategies: FuturesPairStrategy[];
+  @Prop({ type: Array, required: false })
+  strategies: FuturesPairStrategy[];
 
   @Prop({
     type: String,
