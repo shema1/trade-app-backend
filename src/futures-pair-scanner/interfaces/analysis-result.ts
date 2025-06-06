@@ -1,6 +1,8 @@
+import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import { MomentumEmaStrategyParamsDto } from 'src/momentum-ema-cross-strategy/dto/strategy-params.dto';
 import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfaces/momentum-ema-srategy';
 import { VolumeStrategyParamsDto } from 'src/volume-strategy/dto/volume-strategy-params';
+import { VolumeStrategyItem } from 'src/volume-strategy/interfaces/volume-srategy';
 
 export enum AnalysisResultRecommendation {
   BUY = 'BUY',
@@ -34,7 +36,11 @@ export interface AnalysisResult {
   // done?: boolean;
 }
 
+export interface FuturesPairStrategyParams {
+  interval: KlineInterval;
+  limit: number;
+}
 export interface FuturesPairStrategy {
   strategyType: StrategyType;
-  params: MomentumEmaStrategyItem | any;
+  params: MomentumEmaStrategyItem | VolumeStrategyItem;
 }

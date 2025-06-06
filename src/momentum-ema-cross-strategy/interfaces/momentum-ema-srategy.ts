@@ -1,7 +1,6 @@
-import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
+import { FuturesPairStrategyParams } from 'src/futures-pair-scanner/interfaces/analysis-result';
 
-export interface MomentumEmaStrategyItem {
-  interval: KlineInterval;
+export interface MomentumEmaStrategyItem extends FuturesPairStrategyParams {
   minAdxStrength: number;
   minPriceChangePercent: number;
   minVolatilityPercent: number;
@@ -10,5 +9,4 @@ export interface MomentumEmaStrategyItem {
   maxAtrPercent: number;
   trendOnly: boolean;
   dynamicAtrFilter: boolean;
-  limit: number;
 }
