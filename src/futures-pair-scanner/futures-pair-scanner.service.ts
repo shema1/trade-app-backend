@@ -1,14 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { groupBy, map } from 'lodash';
+import { flattenDeep, groupBy, map } from 'lodash';
 import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
 import { VOLUME_DEFAULT_STRATEGY_PARAMS_TEST } from 'src/volume-strategy/constants/volume-default-params';
 import {
   FuturesPairStrategy,
   StrategyType,
+  AnalysisResult,
 } from './interfaces/analysis-result';
 import { BybitService } from 'src/bybit/bybit.service';
 import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
@@ -20,9 +21,11 @@ import { VolumeStrategyItem } from 'src/volume-strategy/interfaces/volume-srateg
 
 @Injectable()
 export class FuturesPairScannerService {
-  private pairScannerTaskMap: Map<string, boolean> = new Map();
-  private scanInProgress: Map<string, boolean> = new Map();
+  private readonly logger = new Logger(FuturesPairScannerService.name);
+  private readonly pairScannerTaskMap: Map<string, boolean> = new Map();
+  private readonly scanInProgress: Map<string, boolean> = new Map();
   private readonly SCAN_INTERVAL = 120000;
+  private readonly BATCH_SIZE = 50;
 
   constructor(
     @InjectModel(FuturesPair.name)
@@ -44,17 +47,19 @@ export class FuturesPairScannerService {
       });
 
       if (!futuresPair) {
+        this.logger.error(`Failed to create futures pair for ${data.name}`);
         return null;
       }
 
       const taskId = futuresPair._id.toString();
       this.pairScannerTaskMap.set(taskId, true);
-
-      // this.runContinuousScanning(futuresPair);
+      this.logger.log(
+        `Started scanning for ${data.name} with taskId: ${taskId}`,
+      );
 
       return futuresPair;
     } catch (error) {
-      console.error(`Error starting scanning for ${data.name}:`, error);
+      this.logger.error(`Error starting scanning for ${data.name}:`, error);
       return null;
     }
   }
@@ -63,21 +68,16 @@ export class FuturesPairScannerService {
     const taskId = futuresPair._id.toString();
 
     try {
-      while (true) {
-        // Перевіряємо чи не зупинено сканування
+      while (this.pairScannerTaskMap.has(taskId)) {
         const updatedPair = await this.futuresPairModel.findById(
           futuresPair._id,
         );
-        if (
-          !updatedPair ||
-          updatedPair.status !== 'ACTIVE' ||
-          !this.pairScannerTaskMap.has(taskId)
-        ) {
-          console.log('Scanning stopped for:', taskId);
+
+        if (!updatedPair || updatedPair.status !== FuturesPairStatus.ACTIVE) {
+          this.logger.log(`Scanning stopped for: ${taskId}`);
           break;
         }
 
-        // Перевіряємо чи не виконується вже сканування
         if (this.scanInProgress.get(taskId)) {
           await this.sleep(1000);
           continue;
@@ -85,90 +85,89 @@ export class FuturesPairScannerService {
 
         try {
           this.scanInProgress.set(taskId, true);
-          // await this.checkStrategies(futuresPair);
+          await this.runAnalysis();
         } catch (error) {
-          console.error(`Error executing strategy for ${taskId}:`, error);
+          this.logger.error(`Error executing strategy for ${taskId}:`, error);
         } finally {
           this.scanInProgress.set(taskId, false);
         }
 
-        // Чекаємо перед наступним скануванням
-        console.log('Waiting for next scan...');
+        this.logger.log('Waiting for next scan...');
         await this.sleep(this.SCAN_INTERVAL);
       }
     } catch (error) {
-      console.error(`Error in continuous scanning for ${taskId}:`, error);
+      this.logger.error(`Error in continuous scanning for ${taskId}:`, error);
     } finally {
-      // Прибираємо таску при завершенні
-      this.pairScannerTaskMap.delete(taskId);
-      this.scanInProgress.delete(taskId);
-      console.log('Scanning process finished:', taskId);
+      this.cleanupTask(taskId);
     }
   }
 
   private async getStrategyResult(
     item: FuturesPairStrategy,
     kline: KlineDataItemBatch,
-  ) {
-    if (item.strategyType === StrategyType.MOMENTUM_EMA_CROSS) {
-      const {
-        minPriceChangePercent,
-        minAdxStrength,
-        minVolatilityPercent,
-        emaShortPeriod,
-        emaLongPeriod,
-        maxAtrPercent,
-        trendOnly,
-        dynamicAtrFilter,
-        confidenceValue,
-      } = item.params as MomentumEmaStrategyItem;
-      return this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy({
-        symbol: kline.symbol,
-        interval: item.params.interval,
-        kline: kline.list,
-        limit: item.params.limit,
-        minPriceChangePercent: minPriceChangePercent,
-        minAdxStrength: minAdxStrength,
-        minVolatilityPercent: minVolatilityPercent,
-        emaShortPeriod: emaShortPeriod,
-        emaLongPeriod: emaLongPeriod,
-        maxAtrPercent: maxAtrPercent,
-        trendOnly: trendOnly,
-        dynamicAtrFilter: dynamicAtrFilter,
-        confidenceValue: confidenceValue,
-        category: kline.category as KlineCategory,
-      });
-    } else if (item.strategyType === StrategyType.VOLUME_ANALYSIS) {
-      const { minVolumeRatio, limit, minConfidence } =
-        item.params as VolumeStrategyItem;
-      return this.volumeStrategyService.analyzeVolume({
-        symbol: kline.symbol,
-        interval: item.params.interval,
-        kline: kline.list,
-        limit: limit,
-        minVolumeRatio,
-        minConfidence,
-        category: kline.category as KlineCategory,
-      });
+  ): Promise<AnalysisResult | null> {
+    try {
+      if (item.strategyType === StrategyType.MOMENTUM_EMA_CROSS) {
+        const params = item.params as MomentumEmaStrategyItem;
+        return await this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy(
+          {
+            symbol: kline.symbol,
+            interval: item.params.interval,
+            kline: kline.list,
+            limit: item.params.limit,
+            minPriceChangePercent: params.minPriceChangePercent,
+            minAdxStrength: params.minAdxStrength,
+            minVolatilityPercent: params.minVolatilityPercent,
+            emaShortPeriod: params.emaShortPeriod,
+            emaLongPeriod: params.emaLongPeriod,
+            maxAtrPercent: params.maxAtrPercent,
+            trendOnly: params.trendOnly,
+            dynamicAtrFilter: params.dynamicAtrFilter,
+            confidenceValue: params.confidenceValue,
+            category: kline.category as KlineCategory,
+          },
+        );
+      } else if (item.strategyType === StrategyType.VOLUME_ANALYSIS) {
+        const params = item.params as VolumeStrategyItem;
+        return await this.volumeStrategyService.analyzeVolume({
+          symbol: kline.symbol,
+          interval: item.params.interval,
+          kline: kline.list,
+          limit: params.limit,
+          minVolumeRatio: params.minVolumeRatio,
+          minConfidence: params.minConfidence,
+          category: kline.category as KlineCategory,
+        });
+      }
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Error in getStrategyResult for ${kline.symbol}:`,
+        error,
+      );
+      return null;
     }
   }
 
   async checkStrategies(
     items: FuturesPairStrategy[],
     kline: KlineDataItemBatch,
-  ) {
-    const results = [];
-
-    items.forEach(async (item) => {
-      const result = await this.getStrategyResult(item, kline);
-      results.push(result);
-    });
-
-    return results;
+  ): Promise<AnalysisResult[]> {
+    try {
+      const strategyPromises = items.map((item) =>
+        this.getStrategyResult(item, kline),
+      );
+      const results = await Promise.all(strategyPromises);
+      return results.filter(
+        (result): result is AnalysisResult => result !== null,
+      );
+    } catch (error) {
+      this.logger.error(`Error in checkStrategies for ${kline.symbol}:`, error);
+      return [];
+    }
   }
 
-  async runAnalysis() // futuresPair: FuturesPair
-  : Promise<any> {
+  async runAnalysis(): Promise<any> {
     try {
       const strategies = [
         ...DEFAULT_STRATEGY_PARAMS_TEST,
@@ -176,32 +175,48 @@ export class FuturesPairScannerService {
       ];
 
       const grouped = groupBy(strategies, 'params.interval');
-
-      // console.log('grouped', grouped);
-
-      const a = await map(
+      const analysisPromises = map(
         grouped,
         async (items: FuturesPairStrategy[], key) => {
-          const kline = await this.bybitService.getKlineDataBatch({
-            symbols: [],
-            interval: key as KlineInterval,
-            category: KlineCategory.LINEAR,
-            limit: 100,
-          });
-          if (kline.length) {
-            const results = kline.map(async (klineItem) => {
-              return await this.checkStrategies(items, klineItem);
+          try {
+            const kline = await this.bybitService.getKlineDataBatch({
+              symbols: [],
+              interval: key as KlineInterval,
+              category: KlineCategory.LINEAR,
+              limit: 500,
             });
-            return results;
+
+            if (!kline.length) {
+              return null;
+            }
+
+            const batchPromises = kline.map((klineItem) =>
+              this.checkStrategies(items, klineItem),
+            );
+
+            return await Promise.all(batchPromises);
+          } catch (error) {
+            this.logger.error(`Error processing interval ${key}:`, error);
+            return null;
           }
-          return null;
         },
       );
 
-      return a.filter((item) => item !== null);
+      const results = await Promise.all(analysisPromises);
+      const a = flattenDeep(
+        results.filter((item): item is any[] => item !== null),
+      );
+      return a.filter((item) => item.confidence > 0);
     } catch (error) {
-      console.error('Error in executeStrategy:', error);
+      this.logger.error('Error in runAnalysis:', error);
+      return [];
     }
+  }
+
+  private cleanupTask(taskId: string): void {
+    this.pairScannerTaskMap.delete(taskId);
+    this.scanInProgress.delete(taskId);
+    this.logger.log(`Scanning process finished: ${taskId}`);
   }
 
   private sleep(ms: number): Promise<void> {

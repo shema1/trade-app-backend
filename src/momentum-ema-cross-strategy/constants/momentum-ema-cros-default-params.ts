@@ -12,6 +12,7 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
     // name: 'aaa',
     params: {
+      name: 'Momentum EMA Cross 1',
       interval: KlineInterval.ONE_MINUTE,
       minAdxStrength: 15,
       minPriceChangePercent: 0.4,
@@ -29,6 +30,7 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
     params: {
+      name: 'Momentum EMA Cross 2',
       interval: KlineInterval.THREE_MINUTES,
       minAdxStrength: 15,
       minPriceChangePercent: 0.4,

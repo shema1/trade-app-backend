@@ -11,6 +11,7 @@ import {
   StrategyType,
 } from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { ApiProperty } from '@nestjs/swagger';
+import { omit } from 'lodash';
 
 @Injectable()
 export class MomentumEmaCrossStrategyService {
@@ -125,7 +126,6 @@ export class MomentumEmaCrossStrategyService {
       let recommendation: AnalysisResultRecommendation =
         AnalysisResultRecommendation.HOLD;
       let confidence = 0;
-      const signalConfidence = 0;
 
       // Перевірка основних умов
       const baseConditions = isVolatile && (!trendOnly || isTrending);
@@ -162,7 +162,6 @@ export class MomentumEmaCrossStrategyService {
         strategyType: StrategyType.MOMENTUM_EMA_CROSS,
         recommendation,
         confidence,
-        signalConfidence,
         currentPrice,
         signals: [
           {
@@ -197,7 +196,7 @@ export class MomentumEmaCrossStrategyService {
           },
         ],
         timestamp: Date.now(),
-        strategyDetails: params,
+        strategyDetails: omit(params, 'kline'),
       };
     } catch (error) {
       console.error(
@@ -217,7 +216,6 @@ export class MomentumEmaCrossStrategyService {
       strategyType: StrategyType.MOMENTUM_EMA_CROSS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,
-      signalConfidence: 0,
       currentPrice: 0,
       signals: [
         {
@@ -227,12 +225,7 @@ export class MomentumEmaCrossStrategyService {
         },
       ],
       timestamp: Date.now(),
-      strategyDetails: params,
-
-      //   strategyDetails: {
-      //     type: 'MOMENTUM_EMA_CROSS',
-      //     error: true,
-      //   },
+      strategyDetails: omit(params, 'kline'),
     };
   }
 

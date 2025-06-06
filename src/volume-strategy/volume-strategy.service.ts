@@ -8,6 +8,7 @@ import {
   StrategyType,
 } from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { KlineCategory } from 'src/bybit/dto/get-kline.dto';
+import { omit } from 'lodash';
 
 const VOLUME_DEFAULT_STRATEGY_PARAMS = {
   minVolumeRatio: 2.5,
@@ -124,7 +125,6 @@ export class VolumeStrategyService {
         strategyType: StrategyType.VOLUME_ANALYSIS,
         recommendation,
         confidence,
-        signalConfidence: 0,
         currentPrice,
         signals: [
           {
@@ -164,7 +164,7 @@ export class VolumeStrategyService {
           },
         ],
         timestamp: Date.now(),
-        strategyDetails: params,
+        strategyDetails: omit(params, 'kline'),
       };
     } catch (error) {
       console.error(`Error in volume analysis for ${params.symbol}:`, error);
@@ -181,11 +181,10 @@ export class VolumeStrategyService {
       strategyType: StrategyType.VOLUME_ANALYSIS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,
-      signalConfidence: 0,
       currentPrice: 0,
       signals: [],
       timestamp: Date.now(),
-      strategyDetails: params,
+      strategyDetails: omit(params, 'kline'),
     };
   }
 

@@ -5,6 +5,7 @@ import {
 } from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { VolumeStrategyItem } from '../interfaces/volume-srategy';
 
+const MIN_CONFIDENCE = 0.5;
 export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.VOLUME_ANALYSIS,
@@ -12,7 +13,7 @@ export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
     params: {
       interval: KlineInterval.ONE_MINUTE,
       minVolumeRatio: 3.5,
-      minConfidence: 0.75,
+      minConfidence: MIN_CONFIDENCE,
       limit: 50,
     } as VolumeStrategyItem,
   },
@@ -21,7 +22,7 @@ export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
     params: {
       interval: KlineInterval.THREE_MINUTES,
       minVolumeRatio: 2.5,
-      minConfidence: 0.65,
+      minConfidence: MIN_CONFIDENCE,
       limit: 50,
     } as VolumeStrategyItem,
   },
