@@ -5,7 +5,7 @@ import {
 } from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { VolumeStrategyItem } from '../interfaces/volume-srategy';
 
-export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
+export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.VOLUME_ANALYSIS,
     // name: 'aaa',

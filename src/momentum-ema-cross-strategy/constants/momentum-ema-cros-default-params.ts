@@ -1,10 +1,12 @@
-import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
+import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import {
   FuturesPairStrategy,
   StrategyType,
 } from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { MomentumEmaStrategyItem } from '../interfaces/momentum-ema-srategy';
 
+export const DEFAULT_CONFIDENCE_VALUE = 0.65;
+export const DEFAULT_CATEGORY = KlineCategory.LINEAR;
 export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
@@ -20,6 +22,8 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
       trendOnly: false,
       dynamicAtrFilter: false,
       limit: 100,
+      confidenceValue: DEFAULT_CONFIDENCE_VALUE,
+      // category: DEFAULT_CATEGORY,
     } as MomentumEmaStrategyItem,
   },
   {
@@ -35,6 +39,8 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
       trendOnly: false,
       dynamicAtrFilter: false,
       limit: 100,
+      confidenceValue: DEFAULT_CONFIDENCE_VALUE,
+      // category: DEFAULT_CATEGORY,
     } as MomentumEmaStrategyItem,
   },
 ];

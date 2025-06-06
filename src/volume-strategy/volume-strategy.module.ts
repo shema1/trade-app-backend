@@ -8,5 +8,6 @@ import { IndicatorsModule } from 'src/indicators/indicators.module';
   controllers: [VolumeStrategyController],
   providers: [VolumeStrategyService],
   imports: [BybitModule, IndicatorsModule],
+  exports: [VolumeStrategyService],
 })
 export class VolumeStrategyModule {}
