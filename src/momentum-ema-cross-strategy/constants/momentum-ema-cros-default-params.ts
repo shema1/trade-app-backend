@@ -1,7 +1,11 @@
 import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
-import { StrategyType } from 'src/futures-pair-scanner/interfaces/analysis-result';
+import {
+  FuturesPairStrategy,
+  StrategyType,
+} from 'src/futures-pair-scanner/interfaces/analysis-result';
+import { MomentumEmaStrategyItem } from '../interfaces/momentum-ema-srategy';
 
-export const DEFAULT_STRATEGY_PARAMS_TEST = [
+export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
     params: {
@@ -15,7 +19,22 @@ export const DEFAULT_STRATEGY_PARAMS_TEST = [
       trendOnly: false,
       dynamicAtrFilter: false,
       limit: 100,
-    },
+    } as MomentumEmaStrategyItem,
+  },
+  {
+    strategyType: StrategyType.MOMENTUM_EMA_CROSS,
+    params: {
+      interval: KlineInterval.THREE_MINUTES,
+      minAdxStrength: 15,
+      minPriceChangePercent: 0.4,
+      minVolatilityPercent: 0.5,
+      emaShortPeriod: 5,
+      emaLongPeriod: 13,
+      maxAtrPercent: 4,
+      trendOnly: false,
+      dynamicAtrFilter: false,
+      limit: 100,
+    } as MomentumEmaStrategyItem,
   },
 ];
 

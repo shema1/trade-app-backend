@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
+import { groupBy, map } from 'lodash';
+import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
 
 @Injectable()
 export class FuturesPairScannerService {
@@ -19,7 +21,11 @@ export class FuturesPairScannerService {
     try {
       const futuresPair = await this.futuresPairModel.create({
         name: data.name,
+        results: [],
+        strategies: DEFAULT_STRATEGY_PARAMS_TEST,
         status: FuturesPairStatus.ACTIVE,
+        cycleCount: 0,
+        lastScanTime: new Date(),
       });
 
       if (!futuresPair) {
@@ -38,87 +44,68 @@ export class FuturesPairScannerService {
     }
   }
 
-  // private async runContinuousScanning(futuresPair: FuturesPair): Promise<void> {
-  //   const taskId = futuresPair._id.toString();
+  private async runContinuousScanning(futuresPair: FuturesPair): Promise<void> {
+    const taskId = futuresPair._id.toString();
 
-  //   try {
-  //     while (true) {
-  //       // Перевіряємо чи не зупинено сканування
-  //       const updatedPair = await this.futuresPairModel.findById(
-  //         futuresPair._id,
-  //       );
-  //       if (
-  //         !updatedPair ||
-  //         updatedPair.status !== 'ACTIVE' ||
-  //         !this.pairScannerTaskMap.has(taskId)
-  //       ) {
-  //         console.log('Scanning stopped for:', taskId);
-  //         break;
-  //       }
+    try {
+      while (true) {
+        // Перевіряємо чи не зупинено сканування
+        const updatedPair = await this.futuresPairModel.findById(
+          futuresPair._id,
+        );
+        if (
+          !updatedPair ||
+          updatedPair.status !== 'ACTIVE' ||
+          !this.pairScannerTaskMap.has(taskId)
+        ) {
+          console.log('Scanning stopped for:', taskId);
+          break;
+        }
 
-  //       // Перевіряємо чи не виконується вже сканування
-  //       if (this.scanInProgress.get(taskId)) {
-  //         await this.sleep(1000);
-  //         continue;
-  //       }
+        // Перевіряємо чи не виконується вже сканування
+        if (this.scanInProgress.get(taskId)) {
+          await this.sleep(1000);
+          continue;
+        }
 
-  //       try {
-  //         this.scanInProgress.set(taskId, true);
-  //         await this.executeStrategy(futuresPair);
-  //       } catch (error) {
-  //         console.error(`Error executing strategy for ${taskId}:`, error);
-  //       } finally {
-  //         this.scanInProgress.set(taskId, false);
-  //       }
+        try {
+          this.scanInProgress.set(taskId, true);
+          // await this.executeStrategy(futuresPair);
+        } catch (error) {
+          console.error(`Error executing strategy for ${taskId}:`, error);
+        } finally {
+          this.scanInProgress.set(taskId, false);
+        }
 
-  //       // Чекаємо перед наступним скануванням
-  //       console.log('Waiting for next scan...');
-  //       await this.sleep(this.SCAN_INTERVAL);
-  //     }
-  //   } catch (error) {
-  //     console.error(`Error in continuous scanning for ${taskId}:`, error);
-  //   } finally {
-  //     // Прибираємо таску при завершенні
-  //     this.pairScannerTaskMap.delete(taskId);
-  //     this.scanInProgress.delete(taskId);
-  //     console.log('Scanning process finished:', taskId);
-  //   }
-  // }
+        // Чекаємо перед наступним скануванням
+        console.log('Waiting for next scan...');
+        await this.sleep(this.SCAN_INTERVAL);
+      }
+    } catch (error) {
+      console.error(`Error in continuous scanning for ${taskId}:`, error);
+    } finally {
+      // Прибираємо таску при завершенні
+      this.pairScannerTaskMap.delete(taskId);
+      this.scanInProgress.delete(taskId);
+      console.log('Scanning process finished:', taskId);
+    }
+  }
 
-  // private async executeStrategy(futuresPair: FuturesPair): Promise<void> {
-  //   try {
-  //     const klineData = await this.getKlineDataBatch(
-  //       futuresPair.params.interval,
-  //       futuresPair.params.limit,
-  //     );
+  async executeStrategy() // futuresPair: FuturesPair
+  : Promise<any> {
+    try {
+      console.log('DEFAULT_STRATEGY_PARAMS_TEST', DEFAULT_STRATEGY_PARAMS_TEST);
+      const grouped = groupBy(DEFAULT_STRATEGY_PARAMS_TEST, 'params.interval');
 
-  //     if (!klineData) {
-  //       console.warn('No kline data found');
-  //       return;
-  //     }
+      console.log('grouped', grouped);
 
-  //     const handleStrategyResult: StrategiesResult = {};
-  //     for (const strategy of futuresPair.strategies) {
-  //       if (
-  //         strategy.strategyType === FuturesPairStrategyType.MOMENTUM_EMA_CROSS
-  //       ) {
-  //         const results = await this.scanPairsMomentumEmaCross(
-  //           futuresPair,
-  //           klineData,
-  //         );
-  //         handleStrategyResult.momentumEmaCross = results;
-  //       }
+      // const a = map(grouped, async (item, key) => {});
 
-  //       if (strategy.strategyType === FuturesPairStrategyType.VOLUME) {
-  //         const results = await this.scanPairsVolume(futuresPair, klineData);
-  //         handleStrategyResult.volume = results;
-  //       }
-  //     }
-  //     await this.handleStrategyResult(futuresPair, handleStrategyResult);
-  //   } catch (error) {
-  //     console.error('Error in executeStrategy:', error);
-  //   }
-  // }
+      return grouped;
+    } catch (error) {
+      console.error('Error in executeStrategy:', error);
+    }
+  }
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));

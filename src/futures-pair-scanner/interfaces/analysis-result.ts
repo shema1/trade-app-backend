@@ -1,4 +1,5 @@
 import { MomentumEmaStrategyParamsDto } from 'src/momentum-ema-cross-strategy/dto/strategy-params.dto';
+import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfaces/momentum-ema-srategy';
 
 export enum AnalysisResultRecommendation {
   BUY = 'BUY',
@@ -33,5 +34,5 @@ export interface AnalysisResult {
 
 export interface FuturesPairStrategy {
   strategyType: StrategyType;
-  params: MomentumEmaStrategyParamsDto;
+  params: MomentumEmaStrategyItem | any;
 }

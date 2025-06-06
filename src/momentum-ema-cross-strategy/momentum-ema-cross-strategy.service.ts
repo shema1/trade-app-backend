@@ -287,4 +287,10 @@ export class MomentumEmaCrossStrategyService {
     // Забезпечуємо, що результат в межах [0, 1]
     return Math.min(Math.max(confidence, 0), 1);
   }
+
+  // async momentumEmaCrossStrategyBatch(
+  //   params: MomentumEmaStrategyParamsDto[],
+  // ): Promise<AnalysisResult[]> {
+  //   // return Pr
+  // }
 }
