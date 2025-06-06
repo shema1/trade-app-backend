@@ -93,7 +93,7 @@ export class BybitService {
     for (let i = 0; i < symbolsToScan.length; i += batchSize) {
       const batch = symbolsToScan.slice(i, i + batchSize);
       console.log(
-        `Processing batch ${i / batchSize + 1}/${Math.ceil(
+        `Processing batch ${data.interval} ${i / batchSize + 1}/${Math.ceil(
           symbolsToScan.length / batchSize,
         )}`,
       );

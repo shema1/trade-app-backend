@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { flattenDeep, groupBy, map } from 'lodash';
+import { groupBy } from 'lodash';
 import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
 import { VOLUME_DEFAULT_STRATEGY_PARAMS_TEST } from 'src/volume-strategy/constants/volume-default-params';
 import {
@@ -184,6 +184,7 @@ export class FuturesPairScannerService {
   }
 
   async runAnalysis(): Promise<AnalysisResult[]> {
+    // async runAnalysis(): Promise<any> {
     try {
       const strategies = [
         ...DEFAULT_STRATEGY_PARAMS_TEST,
@@ -196,52 +197,48 @@ export class FuturesPairScannerService {
       }
 
       const grouped = groupBy(strategies, 'params.interval');
-      const analysisPromises = map(
-        grouped,
-        async (items: FuturesPairStrategy[], key) => {
-          try {
-            const kline = await this.bybitService.getKlineDataBatch({
-              symbols: [],
-              interval: key as KlineInterval,
-              category: KlineCategory.LINEAR,
-              limit: 500,
-            });
+      const results: AnalysisResult[] = [];
+      // return grouped;
+      for (const [interval, items] of Object.entries(grouped)) {
+        try {
+          this.logger.log(`Processing interval: ${interval}`);
 
-            if (!kline?.length) {
-              this.logger.warn(`No kline data for interval ${key}`);
-              return null;
-            }
+          const kline = await this.bybitService.getKlineDataBatch({
+            symbols: [],
+            interval: interval as KlineInterval,
+            category: KlineCategory.LINEAR,
+            limit: 500,
+          });
 
-            const batchPromises = kline.map((klineItem) =>
-              this.checkStrategies(items, klineItem),
-            );
-
-            const batchResults = await Promise.allSettled(batchPromises);
-            return batchResults
-              .filter(
-                (result): result is PromiseFulfilledResult<AnalysisResult[]> =>
-                  result.status === 'fulfilled',
-              )
-              .map((result) => result.value)
-              .flat();
-          } catch (error) {
-            this.logger.error(`Error processing interval ${key}:`, error);
-            return null;
+          if (!kline?.length) {
+            this.logger.warn(`No kline data for interval ${interval}`);
+            continue;
           }
-        },
-      );
 
-      const results = await Promise.allSettled(analysisPromises);
-      const flattenedResults = flattenDeep(
-        results
-          .filter(
-            (result): result is PromiseFulfilledResult<AnalysisResult[]> =>
-              result.status === 'fulfilled' && result.value !== null,
-          )
-          .map((result) => result.value),
-      );
+          for (const klineItem of kline) {
+            try {
+              const symbolResults = await this.checkStrategies(
+                items,
+                klineItem,
+              );
+              if (symbolResults?.length) {
+                results.push(...symbolResults);
+              }
+            } catch (error) {
+              this.logger.error(
+                `Error processing symbol ${klineItem.symbol} for interval ${interval}:`,
+                error,
+              );
+            }
+          }
 
-      return flattenedResults.filter((item) => item?.confidence > 0);
+          await this.sleep(1000);
+        } catch (error) {
+          this.logger.error(`Error processing interval ${interval}:`, error);
+        }
+      }
+
+      return results.filter((item) => item?.confidence > 0);
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];

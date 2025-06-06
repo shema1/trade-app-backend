@@ -1,6 +1,4 @@
 import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
-import { MomentumEmaStrategyParamsDto } from 'src/momentum-ema-cross-strategy/dto/strategy-params.dto';
-import { VolumeStrategyParamsDto } from 'src/volume-strategy/dto/volume-strategy-params.dto';
 
 export enum AnalysisResultRecommendation {
   BUY = 'BUY',
