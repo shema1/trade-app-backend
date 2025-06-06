@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { RestClientV5 } from 'bybit-api';
+import { GetKlineParamsV5, RestClientV5 } from 'bybit-api';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
+import { KlineDataItem } from './interfaces/responses.interface';
 
 @Injectable()
 export class BybitService {
@@ -20,5 +21,15 @@ export class BybitService {
       secret: this.configService.get<string>('BYBIT_API_SECRET'),
       testnet: false,
     });
+  }
+
+  async getKlineData(data: GetKlineParamsV5): Promise<any> {
+    const cacheKey = `kline:${data.symbol}:${data.interval}:${data.limit}`;
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData as KlineDataItem[];
+    }
+
+    return await this.client.getKline(data);
   }
 }
