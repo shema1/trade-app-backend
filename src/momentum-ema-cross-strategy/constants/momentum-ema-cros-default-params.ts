@@ -8,6 +8,7 @@ import { MomentumEmaStrategyItem } from '../interfaces/momentum-ema-srategy';
 export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
+    // name: 'aaa',
     params: {
       interval: KlineInterval.ONE_MINUTE,
       minAdxStrength: 15,

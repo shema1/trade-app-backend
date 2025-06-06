@@ -5,7 +5,6 @@ import {
   DEFAULT_STRATEGY_PARAMS,
   MomentumEmaStrategyParamsDto,
 } from './dto/strategy-params.dto';
-import { KlineCategory } from 'src/bybit/dto/get-kline.dto';
 import {
   AnalysisResult,
   AnalysisResultRecommendation,
@@ -42,6 +41,7 @@ export class MomentumEmaCrossStrategyService {
         maxAtrPercent = DEFAULT_STRATEGY_PARAMS.maxAtrPercent,
         trendOnly = DEFAULT_STRATEGY_PARAMS.trendOnly,
         dynamicAtrFilter = DEFAULT_STRATEGY_PARAMS.dynamicAtrFilter,
+        category = DEFAULT_STRATEGY_PARAMS.category,
       } = params;
 
       const klineData = kline?.length
@@ -51,7 +51,7 @@ export class MomentumEmaCrossStrategyService {
               symbol,
               interval,
               limit,
-              category: KlineCategory.LINEAR,
+              category,
             }) // TODO: change to 300
             .catch((err) => {
               console.error(`Failed to get kline data for ${symbol}:`, err);

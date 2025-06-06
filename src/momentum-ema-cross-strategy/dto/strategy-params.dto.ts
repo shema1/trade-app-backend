@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
+import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import {
   IsArray,
   IsBoolean,
@@ -21,11 +21,6 @@ export class MomentumEmaStrategyParamsDto {
   @IsEnum(KlineInterval)
   @IsNotEmpty()
   interval: KlineInterval;
-
-  @ApiProperty({ example: [], default: [], required: false })
-  @IsArray()
-  @IsOptional()
-  kline: KlineDataItem[];
 
   @ApiProperty({ example: 200, default: 200 })
   @IsNumber()
@@ -75,6 +70,16 @@ export class MomentumEmaStrategyParamsDto {
   @IsNumber()
   @IsNotEmpty()
   confidenceValue: number;
+
+  @ApiProperty({ example: [], default: [], required: false })
+  @IsArray()
+  @IsOptional()
+  kline: KlineDataItem[];
+
+  @ApiProperty({ example: KlineCategory.LINEAR, default: KlineCategory.LINEAR })
+  @IsEnum(KlineCategory)
+  @IsOptional()
+  category: KlineCategory;
 }
 
 export const DEFAULT_STRATEGY_PARAMS = {
@@ -88,4 +93,5 @@ export const DEFAULT_STRATEGY_PARAMS = {
   dynamicAtrFilter: true,
   confidenceValue: 0.75,
   limit: 50,
+  category: KlineCategory.LINEAR,
 };

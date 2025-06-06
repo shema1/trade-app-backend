@@ -1,5 +1,6 @@
 import { MomentumEmaStrategyParamsDto } from 'src/momentum-ema-cross-strategy/dto/strategy-params.dto';
 import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfaces/momentum-ema-srategy';
+import { VolumeStrategyParamsDto } from 'src/volume-strategy/dto/volume-strategy-params';
 
 export enum AnalysisResultRecommendation {
   BUY = 'BUY',
@@ -15,6 +16,7 @@ export interface Signal {
 
 export enum StrategyType {
   MOMENTUM_EMA_CROSS = 'MOMENTUM_EMA_CROSS',
+  VOLUME_ANALYSIS = 'VOLUME_ANALYSIS',
 }
 
 export interface AnalysisResult {
@@ -26,7 +28,7 @@ export interface AnalysisResult {
   currentPrice: number;
   timestamp: number;
   signals: Signal[];
-  strategyDetails?: MomentumEmaStrategyParamsDto; // Деталі конкретної стратегії
+  strategyDetails?: MomentumEmaStrategyParamsDto | VolumeStrategyParamsDto; // Деталі конкретної стратегії
   // telegramMessage?: TelegramMessage;
   // lostProfitInfo?: LostProfitInfo;
   // done?: boolean;
