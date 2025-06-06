@@ -4,6 +4,7 @@ import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { KlineDataItem } from './interfaces/responses.interface';
+import { reverse } from 'lodash';
 
 @Injectable()
 export class BybitService {
@@ -23,13 +24,26 @@ export class BybitService {
     });
   }
 
-  async getKlineData(data: GetKlineParamsV5): Promise<any> {
+  async getKlineData(data: GetKlineParamsV5): Promise<KlineDataItem[]> {
     const cacheKey = `kline:${data.symbol}:${data.interval}:${data.limit}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
       return cachedData as KlineDataItem[];
     }
 
-    return await this.client.getKline(data);
+    const response = await this.client.getKline(data);
+
+    const formattedData = response.result.list.map((item) => ({
+      timestamp: parseInt(item[0]),
+      open: parseFloat(item[1]),
+      high: parseFloat(item[2]),
+      low: parseFloat(item[3]),
+      close: parseFloat(item[4]),
+      volume: parseFloat(item[5]),
+    }));
+
+    await this.cacheManager.set(cacheKey, formattedData, this.CACHE_TTL);
+
+    return reverse(formattedData) as KlineDataItem[];
   }
 }
