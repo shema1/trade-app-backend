@@ -7,6 +7,7 @@ import { FuturesPairScannerModule } from './futures-pair-scanner/futures-pair-sc
 import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { MomentumEmaCrossStrategyModule } from './momentum-ema-cross-strategy/momentum-ema-cross-strategy.module';
 @Module({
   imports: [
     CacheModule.register({
@@ -27,6 +28,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     IndicatorsModule,
     BybitModule,
     FuturesPairScannerModule,
+    MomentumEmaCrossStrategyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
