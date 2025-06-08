@@ -171,6 +171,7 @@ export class MomentumEmaCrossStrategyService {
         recommendation,
         confidence,
         currentPrice,
+        interval,
         signals: [
           {
             name: 'EMA Cross',
@@ -222,6 +223,7 @@ export class MomentumEmaCrossStrategyService {
     return {
       symbol,
       name: params.name,
+      interval: params.interval,
       strategyType: StrategyType.MOMENTUM_EMA_CROSS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,

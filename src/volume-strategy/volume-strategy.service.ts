@@ -129,6 +129,7 @@ export class VolumeStrategyService {
         recommendation,
         confidence,
         currentPrice,
+        interval,
         signals: [
           {
             name: 'Volume Spike',
@@ -182,6 +183,7 @@ export class VolumeStrategyService {
     return {
       symbol,
       name: params.name,
+      interval: params.interval,
       strategyType: StrategyType.VOLUME_ANALYSIS,
       recommendation: AnalysisResultRecommendation.HOLD,
       confidence: 0,

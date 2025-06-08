@@ -3,22 +3,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { isEmpty, take } from 'lodash';
+import { findLast, isEmpty } from 'lodash';
 import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
-
+import { addMinutes, isAfter, differenceInMilliseconds } from 'date-fns';
 import { BybitService } from 'src/bybit/bybit.service';
-import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
+import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import { VolumeStrategyService } from 'src/volume-strategy/volume-strategy.service';
 import { MomentumEmaCrossStrategyService } from 'src/momentum-ema-cross-strategy/momentum-ema-cross-strategy.service';
-import { KlineDataItemBatch } from 'src/bybit/interfaces/responses.interface';
-import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfaces/momentum-ema-srategy';
-import { VolumeStrategyItem } from 'src/volume-strategy/interfaces/volume-srategy';
 import { StrategiesHandlerService } from 'src/strategies-handler/strategies-handler.service';
-import {
-  Strategy,
-  StrategyAnalysisResult,
-  StrategyType,
-} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
+import { StrategyAnalysisResult } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 @Injectable()
 export class FuturesPairScannerService {
@@ -27,6 +20,7 @@ export class FuturesPairScannerService {
   private readonly scanInProgress: Map<string, boolean> = new Map();
   private readonly SCAN_INTERVAL = 120000;
   private readonly BATCH_SIZE = 50;
+  private readonly PAUSE_IN_MINUTES_BETWEEN_SIGNALS = 30;
 
   constructor(
     @InjectModel(FuturesPair.name)
@@ -58,6 +52,8 @@ export class FuturesPairScannerService {
       this.logger.log(
         `Started scanning for ${data.name} with taskId: ${taskId}`,
       );
+
+      this.runContinuousScanning(futuresPair);
 
       return futuresPair;
     } catch (error) {
@@ -104,16 +100,136 @@ export class FuturesPairScannerService {
     }
   }
 
-  async saveSignal(taskId: string, signal: StrategyAnalysisResult[]) {
-    const futuresPair = await this.futuresPairModel.findById(taskId);
-    if (!futuresPair) {
-      this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
-      return;
+  async saveSignal(
+    taskId: string,
+    signals: StrategyAnalysisResult[],
+  ): Promise<void> {
+    try {
+      if (!taskId || !signals?.length) {
+        this.logger.warn('Invalid input parameters for saveSignal');
+        return;
+      }
+
+      const futuresPair = await this.futuresPairModel.findById(taskId);
+      if (!futuresPair) {
+        this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
+        return;
+      }
+
+      const results: StrategyAnalysisResult[] = [];
+      const now = new Date();
+
+      for (const signal of signals) {
+        try {
+          if (!this.isValidSignal(signal)) {
+            this.logger.warn('Invalid signal data:', signal);
+            continue;
+          }
+
+          const lastSignal = this.findLastSignal(futuresPair.results, signal);
+          if (!lastSignal) {
+            results.push(signal);
+            continue;
+          }
+
+          if (this.shouldSaveSignal(lastSignal, now)) {
+            results.push(signal);
+          } else {
+            this.logSkippedSignal(signal, lastSignal, now);
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error processing signal for ${signal?.symbol}:`,
+            error,
+          );
+        }
+      }
+
+      await this.saveResultsToDatabase(taskId, results, now);
+    } catch (error) {
+      this.logger.error(`Error in saveSignal for taskId ${taskId}:`, error);
+    }
+  }
+
+  private isValidSignal(signal: StrategyAnalysisResult): boolean {
+    return !!(
+      signal?.symbol &&
+      signal?.strategyType &&
+      signal?.interval &&
+      signal?.name
+    );
+  }
+
+  private findLastSignal(
+    results: StrategyAnalysisResult[],
+    signal: StrategyAnalysisResult,
+  ): StrategyAnalysisResult | undefined {
+    return findLast(results, (item) => {
+      return (
+        item.symbol === signal.symbol &&
+        item.strategyType === signal.strategyType &&
+        item.interval === signal.interval &&
+        item.name === signal.name
+      );
+    });
+  }
+
+  private shouldSaveSignal(
+    lastSignal: StrategyAnalysisResult,
+    now: Date,
+  ): boolean {
+    const lastSignalDate = new Date(lastSignal.timestamp);
+    const minNextSignalDate = addMinutes(
+      lastSignalDate,
+      this.PAUSE_IN_MINUTES_BETWEEN_SIGNALS,
+    );
+    return isAfter(now, minNextSignalDate);
+  }
+
+  private logSkippedSignal(
+    signal: StrategyAnalysisResult,
+    lastSignal: StrategyAnalysisResult,
+    now: Date,
+  ): void {
+    const lastSignalDate = new Date(lastSignal.timestamp);
+    const minNextSignalDate = addMinutes(
+      lastSignalDate,
+      this.PAUSE_IN_MINUTES_BETWEEN_SIGNALS,
+    );
+    const timeUntilNextSignal = differenceInMilliseconds(
+      minNextSignalDate,
+      now,
+    );
+    this.logger.debug(
+      `Skipping signal for ${signal.symbol} (${signal.name}). Next signal available in ${Math.round(
+        timeUntilNextSignal / 1000 / 60,
+      )} minutes`,
+    );
+  }
+
+  private async saveResultsToDatabase(
+    taskId: string,
+    results: StrategyAnalysisResult[],
+    now: Date,
+  ): Promise<void> {
+    if (results.length > 0) {
+      await this.futuresPairModel.findByIdAndUpdate(
+        taskId,
+        {
+          $push: { results: { $each: results } },
+          $set: { lastScanTime: now },
+        },
+        { new: true },
+      );
+      this.logger.log(
+        `Saved ${results.length} new signals for taskId: ${taskId}`,
+      );
+    } else {
+      this.logger.debug(`No new signals to save for taskId: ${taskId}`);
     }
   }
 
   async runAnalysis(taskId: string): Promise<StrategyAnalysisResult[]> {
-    // async runAnalysis(): Promise<any> {
     try {
       const strategies =
         this.strategiesHandlerService.getDefaultGropedStrategies();
@@ -132,6 +248,7 @@ export class FuturesPairScannerService {
               interval as KlineInterval,
               items,
             );
+          await this.saveSignal(taskId, resultsInterval);
           results.push(...resultsInterval);
           await this.sleep(1000);
         } catch (error) {
@@ -139,9 +256,7 @@ export class FuturesPairScannerService {
         }
       }
 
-      // return results;
-      // return results.filter((item) => item?.confidence > 0.1);
-      // return take(results, 10);
+      return results;
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];

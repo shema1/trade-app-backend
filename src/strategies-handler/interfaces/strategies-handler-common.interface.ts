@@ -35,6 +35,7 @@ export interface StrategyAnalysisResult {
   currentPrice: number;
   timestamp: number;
   signals: Signal[];
+  interval: KlineInterval;
   strategyDetails?: any; // Деталі конкретної стратегії
   // telegramMessage?: TelegramMessage;
   // lostProfitInfo?: LostProfitInfo;
