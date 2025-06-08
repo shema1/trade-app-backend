@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { BybitService } from 'src/bybit/bybit.service';
 import { IndicatorsService } from 'src/indicators/indicators.service';
 import { VolumeStrategyParamsDto } from './dto/volume-strategy-params.dto';
-import {
-  AnalysisResult,
-  AnalysisResultRecommendation,
-  StrategyType,
-} from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { KlineCategory } from 'src/bybit/dto/get-kline.dto';
 import { omit } from 'lodash';
+import {
+  AnalysisResultRecommendation,
+  StrategyAnalysisResult,
+  StrategyType,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 const VOLUME_DEFAULT_STRATEGY_PARAMS = {
   minVolumeRatio: 2.5,
@@ -26,7 +26,7 @@ export class VolumeStrategyService {
 
   async analyzeVolume(
     params: VolumeStrategyParamsDto,
-  ): Promise<AnalysisResult> {
+  ): Promise<StrategyAnalysisResult> {
     try {
       const {
         symbol,
@@ -178,7 +178,7 @@ export class VolumeStrategyService {
   private getDefaultResult(
     symbol: string,
     params: VolumeStrategyParamsDto,
-  ): AnalysisResult {
+  ): StrategyAnalysisResult {
     return {
       symbol,
       name: params.name,

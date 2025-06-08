@@ -3,14 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { groupBy } from 'lodash';
+import { groupBy, isEmpty } from 'lodash';
 import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
-import { VOLUME_DEFAULT_STRATEGY_PARAMS_TEST } from 'src/volume-strategy/constants/volume-default-params';
-import {
-  FuturesPairStrategy,
-  StrategyType,
-  AnalysisResult,
-} from './interfaces/analysis-result';
+
 import { BybitService } from 'src/bybit/bybit.service';
 import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import { VolumeStrategyService } from 'src/volume-strategy/volume-strategy.service';
@@ -18,6 +13,12 @@ import { MomentumEmaCrossStrategyService } from 'src/momentum-ema-cross-strategy
 import { KlineDataItemBatch } from 'src/bybit/interfaces/responses.interface';
 import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfaces/momentum-ema-srategy';
 import { VolumeStrategyItem } from 'src/volume-strategy/interfaces/volume-srategy';
+import { StrategiesHandlerService } from 'src/strategies-handler/strategies-handler.service';
+import {
+  Strategy,
+  StrategyAnalysisResult,
+  StrategyType,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 @Injectable()
 export class FuturesPairScannerService {
@@ -33,6 +34,7 @@ export class FuturesPairScannerService {
     private readonly bybitService: BybitService,
     private readonly momentumEmaCrossStrategyService: MomentumEmaCrossStrategyService,
     private readonly volumeStrategyService: VolumeStrategyService,
+    private readonly strategiesHandlerService: StrategiesHandlerService,
   ) {}
 
   async startScanning(data: StartScanningDto): Promise<FuturesPair | null> {
@@ -103,9 +105,9 @@ export class FuturesPairScannerService {
   }
 
   private async getStrategyResult(
-    item: FuturesPairStrategy,
+    item: Strategy,
     kline: KlineDataItemBatch,
-  ): Promise<AnalysisResult | null> {
+  ): Promise<StrategyAnalysisResult | null> {
     try {
       if (!kline?.list?.length) {
         this.logger.warn(`No kline data for ${kline.symbol}`);
@@ -157,9 +159,9 @@ export class FuturesPairScannerService {
   }
 
   async checkStrategies(
-    items: FuturesPairStrategy[],
+    items: Strategy[],
     kline: KlineDataItemBatch,
-  ): Promise<AnalysisResult[]> {
+  ): Promise<StrategyAnalysisResult[]> {
     try {
       if (!items?.length) {
         this.logger.warn('No strategies provided for check');
@@ -173,7 +175,9 @@ export class FuturesPairScannerService {
 
       return results
         .filter(
-          (result): result is PromiseFulfilledResult<AnalysisResult | null> =>
+          (
+            result,
+          ): result is PromiseFulfilledResult<StrategyAnalysisResult | null> =>
             result.status === 'fulfilled' && result.value !== null,
         )
         .map((result) => result.value);
@@ -183,7 +187,7 @@ export class FuturesPairScannerService {
     }
   }
 
-  async saveSignal(taskId: string, signal: AnalysisResult[]) {
+  async saveSignal(taskId: string, signal: StrategyAnalysisResult[]) {
     const futuresPair = await this.futuresPairModel.findById(taskId);
     if (!futuresPair) {
       this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
@@ -191,23 +195,21 @@ export class FuturesPairScannerService {
     }
   }
 
-  async runAnalysis(taskId: string): Promise<AnalysisResult[]> {
+  async runAnalysis(taskId: string): Promise<StrategyAnalysisResult[]> {
     // async runAnalysis(): Promise<any> {
     try {
-      const strategies = [
-        ...DEFAULT_STRATEGY_PARAMS_TEST,
-        ...VOLUME_DEFAULT_STRATEGY_PARAMS_TEST,
-      ];
+      const strategies =
+        this.strategiesHandlerService.getDefaultGropedStrategies();
 
-      if (!strategies.length) {
+      if (isEmpty(strategies)) {
         this.logger.warn('No strategies configured for analysis');
         return [];
       }
 
-      const grouped = groupBy(strategies, 'params.interval');
-      const results: AnalysisResult[] = [];
+      // const grouped = groupBy(strategies, 'params.interval');
+      const results: StrategyAnalysisResult[] = [];
       // return grouped;
-      for (const [interval, items] of Object.entries(grouped)) {
+      for (const [interval, items] of Object.entries(strategies)) {
         try {
           this.logger.log(`Processing interval: ${interval}`);
 
@@ -223,26 +225,31 @@ export class FuturesPairScannerService {
             continue;
           }
 
-          for (const klineItem of kline) {
-            try {
-              const symbolResults = await this.checkStrategies(
-                items,
-                klineItem,
-              );
-              if (symbolResults?.length) {
-                console.log(
-                  `interval: ${interval}, results: ${symbolResults?.length}`,
-                );
-                // await this.saveSignal(taskId, symbolResults);
-                // results.push(...symbolResults);
-              }
-            } catch (error) {
-              this.logger.error(
-                `Error processing symbol ${klineItem.symbol} for interval ${interval}:`,
-                error,
-              );
-            }
-          }
+          // const checkStrategiesPromises = kline.map(
+          //   async (item: KlineDataItemBatch) => {
+          //     const symbolResults = await this.checkStrategies(items, item);
+          //     return symbolResults;
+          //   },
+          // );
+
+          // const checkStrategiesPromisesResult = await Promise.allSettled(
+          //   checkStrategiesPromises,
+          // );
+
+          // const checkStrategiesPromisesResultFiltered =
+          //   checkStrategiesPromisesResult
+          //     .filter(
+          //       (
+          //         result,
+          //       ): result is PromiseFulfilledResult<StrategyAnalysisResult | null> =>
+          //         result.status === 'fulfilled' && result.value !== null,
+          //     )
+          //     .map((result) => result.value);
+
+          // console.log(
+          //   `checkStrategiesPromisesResult:`,
+          //   checkStrategiesPromisesResultFiltered,
+          // );
 
           await this.sleep(1000);
         } catch (error) {

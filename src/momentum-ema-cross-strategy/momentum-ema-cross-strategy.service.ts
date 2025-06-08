@@ -5,13 +5,13 @@ import {
   DEFAULT_STRATEGY_PARAMS,
   MomentumEmaStrategyParamsDto,
 } from './dto/strategy-params.dto';
-import {
-  AnalysisResult,
-  AnalysisResultRecommendation,
-  StrategyType,
-} from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { ApiProperty } from '@nestjs/swagger';
 import { omit } from 'lodash';
+import {
+  AnalysisResultRecommendation,
+  StrategyAnalysisResult,
+  StrategyType,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 @Injectable()
 export class MomentumEmaCrossStrategyService {
@@ -27,7 +27,7 @@ export class MomentumEmaCrossStrategyService {
   })
   async momentumEmaCrossStrategy(
     params: MomentumEmaStrategyParamsDto,
-  ): Promise<AnalysisResult> {
+  ): Promise<StrategyAnalysisResult> {
     try {
       const {
         symbol,
@@ -218,7 +218,7 @@ export class MomentumEmaCrossStrategyService {
   private getDefaultResult(
     symbol: string,
     params: MomentumEmaStrategyParamsDto,
-  ): AnalysisResult {
+  ): StrategyAnalysisResult {
     return {
       symbol,
       name: params.name,
@@ -292,7 +292,7 @@ export class MomentumEmaCrossStrategyService {
 
   // async momentumEmaCrossStrategyBatch(
   //   params: MomentumEmaStrategyParamsDto[],
-  // ): Promise<AnalysisResult[]> {
+  // ): Promise<StrategyAnalysisResult[]> {
   //   // return Pr
   // }
 }

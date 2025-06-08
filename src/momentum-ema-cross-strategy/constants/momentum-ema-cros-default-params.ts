@@ -1,13 +1,13 @@
 import { KlineCategory, KlineInterval } from 'src/bybit/dto/get-kline.dto';
-import {
-  FuturesPairStrategy,
-  StrategyType,
-} from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { MomentumEmaStrategyItem } from '../interfaces/momentum-ema-srategy';
+import {
+  Strategy,
+  StrategyType,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 export const DEFAULT_CONFIDENCE_VALUE = 0.65;
 export const DEFAULT_CATEGORY = KlineCategory.LINEAR;
-export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
+export const DEFAULT_STRATEGY_PARAMS_TEST: Strategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
     params: {

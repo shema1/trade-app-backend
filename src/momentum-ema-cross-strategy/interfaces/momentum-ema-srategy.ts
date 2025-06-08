@@ -1,6 +1,6 @@
-import { FuturesPairStrategyParams } from 'src/futures-pair-scanner/interfaces/analysis-result';
+import { StrategyParams } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
-export interface MomentumEmaStrategyItem extends FuturesPairStrategyParams {
+export interface MomentumEmaStrategyItem extends StrategyParams {
   minAdxStrength: number;
   minPriceChangePercent: number;
   minVolatilityPercent: number;

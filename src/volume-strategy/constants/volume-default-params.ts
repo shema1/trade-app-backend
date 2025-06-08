@@ -1,9 +1,9 @@
 import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
-import {
-  FuturesPairStrategy,
-  StrategyType,
-} from 'src/futures-pair-scanner/interfaces/analysis-result';
 import { VolumeStrategyItem } from '../interfaces/volume-srategy';
+import {
+  Strategy,
+  StrategyType,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 // Базові параметри для різних типів стратегій
 const AGGRESSIVE_PARAMS = {
@@ -116,7 +116,7 @@ const GAP_TRADING_PARAMS = {
   limit: 45,
 };
 
-export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
+export const VOLUME_DEFAULT_STRATEGY_PARAMS_TEST: Strategy[] = [
   // 1 хвилина - Скальпінг
   {
     strategyType: StrategyType.VOLUME_ANALYSIS,

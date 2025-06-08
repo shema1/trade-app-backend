@@ -1,6 +1,6 @@
-import { FuturesPairStrategyParams } from 'src/futures-pair-scanner/interfaces/analysis-result';
+import { StrategyParams } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
-export interface VolumeStrategyItem extends FuturesPairStrategyParams {
+export interface VolumeStrategyItem extends StrategyParams {
   minVolumeRatio: number;
   // minConfidence: number;
 }

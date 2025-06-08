@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MomentumEmaCrossStrategyModule } from './momentum-ema-cross-strategy/momentum-ema-cross-strategy.module';
 import { VolumeStrategyModule } from './volume-strategy/volume-strategy.module';
+import { StrategiesHandlerModule } from './strategies-handler/strategies-handler.module';
 @Module({
   imports: [
     CacheModule.register({
@@ -31,6 +32,7 @@ import { VolumeStrategyModule } from './volume-strategy/volume-strategy.module';
     FuturesPairScannerModule,
     MomentumEmaCrossStrategyModule,
     VolumeStrategyModule,
+    StrategiesHandlerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
