@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { groupBy, isEmpty } from 'lodash';
+import { isEmpty, take } from 'lodash';
 import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
 
 import { BybitService } from 'src/bybit/bybit.service';
@@ -104,89 +104,6 @@ export class FuturesPairScannerService {
     }
   }
 
-  private async getStrategyResult(
-    item: Strategy,
-    kline: KlineDataItemBatch,
-  ): Promise<StrategyAnalysisResult | null> {
-    try {
-      if (!kline?.list?.length) {
-        this.logger.warn(`No kline data for ${kline.symbol}`);
-        return null;
-      }
-
-      if (item.strategyType === StrategyType.MOMENTUM_EMA_CROSS) {
-        const params = item.params as MomentumEmaStrategyItem;
-        return await this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy(
-          {
-            symbol: kline.symbol,
-            interval: item.params.interval,
-            kline: kline.list,
-            limit: item.params.limit,
-            minPriceChangePercent: params.minPriceChangePercent,
-            minAdxStrength: params.minAdxStrength,
-            minVolatilityPercent: params.minVolatilityPercent,
-            emaShortPeriod: params.emaShortPeriod,
-            emaLongPeriod: params.emaLongPeriod,
-            maxAtrPercent: params.maxAtrPercent,
-            trendOnly: params.trendOnly,
-            dynamicAtrFilter: params.dynamicAtrFilter,
-            minConfidence: params.minConfidence,
-            category: kline.category as KlineCategory,
-            name: params.name,
-          },
-        );
-      } else if (item.strategyType === StrategyType.VOLUME_ANALYSIS) {
-        const params = item.params as VolumeStrategyItem;
-        return await this.volumeStrategyService.analyzeVolume({
-          name: params.name,
-          symbol: kline.symbol,
-          interval: item.params.interval,
-          kline: kline.list,
-          limit: params.limit,
-          minVolumeRatio: params.minVolumeRatio,
-          minConfidence: params.minConfidence,
-          category: kline.category as KlineCategory,
-        });
-      }
-      return null;
-    } catch (error) {
-      this.logger.error(
-        `Error in getStrategyResult for ${kline.symbol} with strategy ${item.strategyType}:`,
-        error,
-      );
-      return null;
-    }
-  }
-
-  async checkStrategies(
-    items: Strategy[],
-    kline: KlineDataItemBatch,
-  ): Promise<StrategyAnalysisResult[]> {
-    try {
-      if (!items?.length) {
-        this.logger.warn('No strategies provided for check');
-        return [];
-      }
-
-      const strategyPromises = items.map((item) =>
-        this.getStrategyResult(item, kline),
-      );
-      const results = await Promise.allSettled(strategyPromises);
-
-      return results
-        .filter(
-          (
-            result,
-          ): result is PromiseFulfilledResult<StrategyAnalysisResult | null> =>
-            result.status === 'fulfilled' && result.value !== null,
-        )
-        .map((result) => result.value);
-    } catch (error) {
-      this.logger.error(`Error in checkStrategies for ${kline.symbol}:`, error);
-      return [];
-    }
-  }
-
   async saveSignal(taskId: string, signal: StrategyAnalysisResult[]) {
     const futuresPair = await this.futuresPairModel.findById(taskId);
     if (!futuresPair) {
@@ -200,57 +117,22 @@ export class FuturesPairScannerService {
     try {
       const strategies =
         this.strategiesHandlerService.getDefaultGropedStrategies();
-
       if (isEmpty(strategies)) {
         this.logger.warn('No strategies configured for analysis');
         return [];
       }
 
-      // const grouped = groupBy(strategies, 'params.interval');
       const results: StrategyAnalysisResult[] = [];
-      // return grouped;
+
       for (const [interval, items] of Object.entries(strategies)) {
         try {
           this.logger.log(`Processing interval: ${interval}`);
-
-          const kline = await this.bybitService.getKlineDataBatch({
-            symbols: [],
-            interval: interval as KlineInterval,
-            category: KlineCategory.LINEAR,
-            limit: 500,
-          });
-
-          if (!kline?.length) {
-            this.logger.warn(`No kline data for interval ${interval}`);
-            continue;
-          }
-
-          // const checkStrategiesPromises = kline.map(
-          //   async (item: KlineDataItemBatch) => {
-          //     const symbolResults = await this.checkStrategies(items, item);
-          //     return symbolResults;
-          //   },
-          // );
-
-          // const checkStrategiesPromisesResult = await Promise.allSettled(
-          //   checkStrategiesPromises,
-          // );
-
-          // const checkStrategiesPromisesResultFiltered =
-          //   checkStrategiesPromisesResult
-          //     .filter(
-          //       (
-          //         result,
-          //       ): result is PromiseFulfilledResult<StrategyAnalysisResult | null> =>
-          //         result.status === 'fulfilled' && result.value !== null,
-          //     )
-          //     .map((result) => result.value);
-
-          // console.log(
-          //   `checkStrategiesPromisesResult:`,
-          //   checkStrategiesPromisesResultFiltered,
-          // );
-
+          const resultsInterval =
+            await this.strategiesHandlerService.getStrategiesAnalysisResults(
+              interval as KlineInterval,
+              items,
+            );
+          results.push(...resultsInterval);
           await this.sleep(1000);
         } catch (error) {
           this.logger.error(`Error processing interval ${interval}:`, error);
@@ -258,7 +140,8 @@ export class FuturesPairScannerService {
       }
 
       // return results;
-      return results.filter((item) => item?.confidence > 0.1);
+      // return results.filter((item) => item?.confidence > 0.1);
+      // return take(results, 10);
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];
