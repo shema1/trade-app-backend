@@ -9,6 +9,6 @@ export class FuturesPairScannerController {
 
   @Get('execute-strategy')
   async executeStrategy() {
-    return this.futuresPairScannerService.runAnalysis();
+    return this.futuresPairScannerService.runAnalysis('123');
   }
 }

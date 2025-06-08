@@ -85,7 +85,7 @@ export class FuturesPairScannerService {
 
         try {
           this.scanInProgress.set(taskId, true);
-          await this.runAnalysis();
+          await this.runAnalysis(taskId);
         } catch (error) {
           this.logger.error(`Error executing strategy for ${taskId}:`, error);
         } finally {
@@ -128,7 +128,7 @@ export class FuturesPairScannerService {
             maxAtrPercent: params.maxAtrPercent,
             trendOnly: params.trendOnly,
             dynamicAtrFilter: params.dynamicAtrFilter,
-            confidenceValue: params.confidenceValue,
+            minConfidence: params.minConfidence,
             category: kline.category as KlineCategory,
             name: params.name,
           },
@@ -183,7 +183,15 @@ export class FuturesPairScannerService {
     }
   }
 
-  async runAnalysis(): Promise<AnalysisResult[]> {
+  async saveSignal(taskId: string, signal: AnalysisResult[]) {
+    const futuresPair = await this.futuresPairModel.findById(taskId);
+    if (!futuresPair) {
+      this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
+      return;
+    }
+  }
+
+  async runAnalysis(taskId: string): Promise<AnalysisResult[]> {
     // async runAnalysis(): Promise<any> {
     try {
       const strategies = [
@@ -222,7 +230,11 @@ export class FuturesPairScannerService {
                 klineItem,
               );
               if (symbolResults?.length) {
-                results.push(...symbolResults);
+                console.log(
+                  `interval: ${interval}, results: ${symbolResults?.length}`,
+                );
+                // await this.saveSignal(taskId, symbolResults);
+                // results.push(...symbolResults);
               }
             } catch (error) {
               this.logger.error(
@@ -238,7 +250,8 @@ export class FuturesPairScannerService {
         }
       }
 
-      return results.filter((item) => item?.confidence > 0);
+      // return results;
+      return results.filter((item) => item?.confidence > 0.1);
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];

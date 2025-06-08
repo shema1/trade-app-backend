@@ -86,7 +86,7 @@ export class BybitService {
       symbolsToScan.length,
     );
 
-    const batchSize = 50;
+    const batchSize = 25;
     const results: KlineDataItemBatch[] = [];
     const failedSymbols: string[] = [];
 

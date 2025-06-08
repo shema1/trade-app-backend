@@ -9,6 +9,6 @@ export interface MomentumEmaStrategyItem extends FuturesPairStrategyParams {
   maxAtrPercent: number;
   trendOnly: boolean;
   dynamicAtrFilter: boolean;
-  confidenceValue: number;
+  // minConfidence: number;
   // category: KlineCategory;
 }

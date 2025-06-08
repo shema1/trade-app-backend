@@ -44,6 +44,7 @@ export class MomentumEmaCrossStrategyService {
         dynamicAtrFilter = DEFAULT_STRATEGY_PARAMS.dynamicAtrFilter,
         category = DEFAULT_STRATEGY_PARAMS.category,
         name = DEFAULT_STRATEGY_PARAMS.name,
+        minConfidence = DEFAULT_STRATEGY_PARAMS.minConfidence,
       } = params;
 
       const klineData = kline?.length
@@ -156,6 +157,11 @@ export class MomentumEmaCrossStrategyService {
             effectiveMinVolatility,
           );
         }
+      }
+
+      if (confidence < minConfidence) {
+        recommendation = AnalysisResultRecommendation.HOLD;
+        confidence = 0;
       }
 
       return {

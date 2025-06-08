@@ -36,6 +36,7 @@ export interface FuturesPairStrategyParams {
   name: string;
   interval: KlineInterval;
   limit: number;
+  minConfidence: number;
 }
 
 export interface FuturesPairStrategy {

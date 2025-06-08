@@ -66,11 +66,6 @@ export class MomentumEmaStrategyParamsDto {
   @IsNotEmpty()
   dynamicAtrFilter: boolean;
 
-  @ApiProperty({ example: 0.75, default: 0.75 })
-  @IsNumber()
-  @IsNotEmpty()
-  confidenceValue: number;
-
   @ApiProperty({ example: [], default: [], required: false })
   @IsArray()
   @IsOptional()
@@ -88,6 +83,11 @@ export class MomentumEmaStrategyParamsDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  @ApiProperty({ example: 0.75, default: 0.75 })
+  @IsNumber()
+  @IsNotEmpty()
+  minConfidence: number;
 }
 
 export const DEFAULT_STRATEGY_PARAMS = {
@@ -99,7 +99,7 @@ export const DEFAULT_STRATEGY_PARAMS = {
   maxAtrPercent: 5,
   trendOnly: true,
   dynamicAtrFilter: true,
-  confidenceValue: 0.75,
+  minConfidence: 0.75,
   limit: 50,
   category: KlineCategory.LINEAR,
   name: 'Momentum EMA Cross 1',

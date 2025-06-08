@@ -10,7 +10,6 @@ export const DEFAULT_CATEGORY = KlineCategory.LINEAR;
 export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
   {
     strategyType: StrategyType.MOMENTUM_EMA_CROSS,
-    // name: 'aaa',
     params: {
       name: 'Momentum EMA Cross 1',
       interval: KlineInterval.ONE_MINUTE,
@@ -23,7 +22,7 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
       trendOnly: false,
       dynamicAtrFilter: false,
       limit: 100,
-      confidenceValue: DEFAULT_CONFIDENCE_VALUE,
+      minConfidence: 0.75,
       // category: DEFAULT_CATEGORY,
     } as MomentumEmaStrategyItem,
   },
@@ -41,7 +40,7 @@ export const DEFAULT_STRATEGY_PARAMS_TEST: FuturesPairStrategy[] = [
       trendOnly: false,
       dynamicAtrFilter: false,
       limit: 100,
-      confidenceValue: DEFAULT_CONFIDENCE_VALUE,
+      minConfidence: 0.75,
       // category: DEFAULT_CATEGORY,
     } as MomentumEmaStrategyItem,
   },

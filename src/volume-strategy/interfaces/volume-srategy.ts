@@ -2,5 +2,5 @@ import { FuturesPairStrategyParams } from 'src/futures-pair-scanner/interfaces/a
 
 export interface VolumeStrategyItem extends FuturesPairStrategyParams {
   minVolumeRatio: number;
-  minConfidence: number;
+  // minConfidence: number;
 }
