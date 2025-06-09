@@ -4,14 +4,16 @@ import { Model } from 'mongoose';
 import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 import { StartScanningDto } from './dto/start-scanning.dto';
 import { findLast, isEmpty } from 'lodash';
-import { DEFAULT_STRATEGY_PARAMS_TEST } from 'src/momentum-ema-cross-strategy/constants/momentum-ema-cros-default-params';
 import { addMinutes, isAfter, differenceInMilliseconds } from 'date-fns';
 import { BybitService } from 'src/bybit/bybit.service';
 import { KlineInterval } from 'src/bybit/dto/get-kline.dto';
 import { VolumeStrategyService } from 'src/volume-strategy/volume-strategy.service';
 import { MomentumEmaCrossStrategyService } from 'src/momentum-ema-cross-strategy/momentum-ema-cross-strategy.service';
 import { StrategiesHandlerService } from 'src/strategies-handler/strategies-handler.service';
-import { StrategyAnalysisResult } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
+import {
+  AnalysisResultRecommendation,
+  StrategyAnalysisResult,
+} from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 @Injectable()
 export class FuturesPairScannerService {
@@ -36,7 +38,7 @@ export class FuturesPairScannerService {
       const futuresPair = await this.futuresPairModel.create({
         name: data.name,
         results: [],
-        strategies: DEFAULT_STRATEGY_PARAMS_TEST,
+        strategies: [],
         status: FuturesPairStatus.ACTIVE,
         cycleCount: 0,
         lastScanTime: new Date(),
@@ -102,9 +104,13 @@ export class FuturesPairScannerService {
 
   async saveSignal(
     taskId: string,
-    signals: StrategyAnalysisResult[],
+    signalsData: StrategyAnalysisResult[],
   ): Promise<void> {
     try {
+      const signals = signalsData.filter(
+        (item) => item.recommendation !== AnalysisResultRecommendation.HOLD,
+      );
+
       if (!taskId || !signals?.length) {
         this.logger.warn('Invalid input parameters for saveSignal');
         return;
@@ -135,7 +141,7 @@ export class FuturesPairScannerService {
           if (this.shouldSaveSignal(lastSignal, now)) {
             results.push(signal);
           } else {
-            this.logSkippedSignal(signal, lastSignal, now);
+            // this.logSkippedSignal(signal, lastSignal, now);
           }
         } catch (error) {
           this.logger.error(

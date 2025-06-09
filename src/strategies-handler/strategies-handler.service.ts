@@ -29,7 +29,7 @@ export class StrategiesHandlerService {
   getDefaultGropedStrategies(): GroupedStrategies {
     try {
       const strategies = [
-        // ...DEFAULT_STRATEGY_PARAMS_TEST,
+        ...DEFAULT_STRATEGY_PARAMS_TEST,
         ...VOLUME_DEFAULT_STRATEGY_PARAMS_TEST,
       ];
 
