@@ -10,6 +10,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { MomentumEmaCrossStrategyModule } from './momentum-ema-cross-strategy/momentum-ema-cross-strategy.module';
 import { VolumeStrategyModule } from './volume-strategy/volume-strategy.module';
 import { StrategiesHandlerModule } from './strategies-handler/strategies-handler.module';
+import { StrategyResultsAnalyzerModule } from './strategy-results-analyzer/strategy-results-analyzer.module';
 @Module({
   imports: [
     CacheModule.register({
@@ -33,6 +34,7 @@ import { StrategiesHandlerModule } from './strategies-handler/strategies-handler
     MomentumEmaCrossStrategyModule,
     VolumeStrategyModule,
     StrategiesHandlerModule,
+    StrategyResultsAnalyzerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
