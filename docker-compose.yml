@@ -2,12 +2,17 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - /app/node_modules
     ports:
       - "3000:3000"
+    command: npm run start:dev
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/trade-app
-      - NODE_ENV=production
+      - NODE_ENV=development
     depends_on:
       - mongodb
     networks:

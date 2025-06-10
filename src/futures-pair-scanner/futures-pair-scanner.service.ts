@@ -237,8 +237,11 @@ export class FuturesPairScannerService {
 
   async runAnalysis(taskId: string): Promise<StrategyAnalysisResult[]> {
     try {
+      const updatedPair = await this.futuresPairModel.findById(taskId);
+
       const strategies =
         this.strategiesHandlerService.getDefaultGropedStrategies();
+        
       if (isEmpty(strategies)) {
         this.logger.warn('No strategies configured for analysis');
         return [];
@@ -260,6 +263,13 @@ export class FuturesPairScannerService {
         } catch (error) {
           this.logger.error(`Error processing interval ${interval}:`, error);
         }
+
+      }
+      
+      if (updatedPair) {
+        await this.futuresPairModel.findByIdAndUpdate(taskId, {
+          $set: { cycleCount: updatedPair.cycleCount + 1 },
+        });
       }
 
       return results;
