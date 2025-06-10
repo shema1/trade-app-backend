@@ -1,56 +1,56 @@
-# compiled output
-/dist
-/node_modules
-/build
-
-# Logs
-logs
-*.log
+# Залежності
+node_modules/
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 
-# OS
+# Збірка
+dist/
+build/
+*.tsbuildinfo
+
+# Середовище
+.env
+.env.*
+!.env.example
+
+# Логи
+logs/
+*.log
+
+# IDE та редактори
+.idea/
+.vscode/
+*.swp
+*.swo
 .DS_Store
 
-# Tests
-/coverage
-/.nyc_output
+# Тестове покриття
+coverage/
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Docker
+.docker/
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Тимчасові файли
+tmp/
+temp/
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# Чутливі дані
+*.pem
+*.key
+*.cert
+config.local.js
+config.prod.js
 
-# temp directory
-.temp
-.tmp
+# Кеш
+.cache/
+.npm/
+.eslintcache
+.stylelintcache
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# MongoDB
+data/db/
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+# Інші
+.DS_Store
+Thumbs.db
