@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { groupBy } from 'lodash';
 import {
   GroupedStrategies,
+  StartegyScanningIntervalParams,
   Strategy,
   StrategyAnalysisResult,
   StrategyType,
@@ -25,6 +26,56 @@ export class StrategiesHandlerService {
     private readonly momentumEmaCrossStrategyService: MomentumEmaCrossStrategyService,
     private readonly volumeStrategyService: VolumeStrategyService,
   ) {}
+
+  getStartegyIntervalParams(): StartegyScanningIntervalParams {
+    return {
+      [KlineInterval.ONE_MINUTE]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 1,
+      },
+      [KlineInterval.FIVE_MINUTES]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 1,
+      },
+      [KlineInterval.FIFTEEN_MINUTES]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 2,
+      },
+      [KlineInterval.THIRTY_MINUTES]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 5,
+      },
+      [KlineInterval.ONE_HOUR]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 10,
+      },
+      [KlineInterval.FOUR_HOURS]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 30,
+      },
+      [KlineInterval.ONE_DAY]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 60,
+      },
+      [KlineInterval.ONE_WEEK]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 60,
+      },
+      [KlineInterval.ONE_MONTH]: {
+        lastSync: '',
+        count: 0,
+        frequencyInMinutes: 60,
+      },
+    };
+  }
 
   getDefaultGropedStrategies(): GroupedStrategies {
     try {

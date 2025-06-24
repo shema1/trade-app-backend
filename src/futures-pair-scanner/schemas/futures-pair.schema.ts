@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import {
+  StartegyScanningIntervalParams,
   Strategy,
   StrategyAnalysisResult,
 } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
@@ -36,6 +37,9 @@ export class FuturesPair extends Document {
 
   @Prop()
   lastScanTime?: Date;
+
+  @Prop({ type: Object, required: false })
+  startegyScanningIntervalParams: StartegyScanningIntervalParams;
 }
 
 export const FuturesPairSchema = SchemaFactory.createForClass(FuturesPair);

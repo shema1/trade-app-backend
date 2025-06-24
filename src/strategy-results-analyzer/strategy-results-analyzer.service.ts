@@ -87,8 +87,11 @@ export class StrategyResultsAnalyzerService {
     }
 
     const groupedResults = this.groupResultsByType(results);
+    // return null;
+    // return groupedResults;
     const test = this.getResults(groupedResults, 80);
-    return this.findMostEffectiveStrategies(test);
+    return test;
+    // return this.findMostEffectiveStrategies(test);
   }
 
   private splitIntoBatches<T>(items: T[], batchSize: number): T[][] {

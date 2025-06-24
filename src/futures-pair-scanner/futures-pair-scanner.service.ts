@@ -13,6 +13,7 @@ import { StrategiesHandlerService } from 'src/strategies-handler/strategies-hand
 import {
   AnalysisResultRecommendation,
   StrategyAnalysisResult,
+  StartegyScanningIntervalParams,
 } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
 
 @Injectable()
@@ -20,9 +21,9 @@ export class FuturesPairScannerService {
   private readonly logger = new Logger(FuturesPairScannerService.name);
   private readonly pairScannerTaskMap: Map<string, boolean> = new Map();
   private readonly scanInProgress: Map<string, boolean> = new Map();
-  private readonly SCAN_INTERVAL = 120000;
+  private readonly SCAN_INTERVAL = 1000;
   private readonly BATCH_SIZE = 50;
-  private readonly PAUSE_IN_MINUTES_BETWEEN_SIGNALS = 30;
+  private readonly PAUSE_IN_MINUTES_BETWEEN_SIGNALS = 360;
 
   constructor(
     @InjectModel(FuturesPair.name)
@@ -42,6 +43,8 @@ export class FuturesPairScannerService {
         status: FuturesPairStatus.ACTIVE,
         cycleCount: 0,
         lastScanTime: new Date(),
+        startegyScanningIntervalParams:
+          this.strategiesHandlerService.getStartegyIntervalParams(),
       });
 
       if (!futuresPair) {
@@ -239,18 +242,51 @@ export class FuturesPairScannerService {
     try {
       const updatedPair = await this.futuresPairModel.findById(taskId);
 
+      if (!updatedPair) {
+        this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
+        return [];
+      }
+
+      // Ініціалізуємо параметри сканування, якщо вони відсутні
+      // if (!updatedPair.startegyScanningIntervalParams) {
+      //   // await this.initializeScanningParams(taskId);
+      //   // Отримуємо оновлений об'єкт після ініціалізації
+      //   const refreshedPair = await this.futuresPairModel.findById(taskId);
+      //   if (refreshedPair) {
+      //     updatedPair.startegyScanningIntervalParams =
+      //       refreshedPair.startegyScanningIntervalParams;
+      //   }
+      // }
+
       const strategies =
         this.strategiesHandlerService.getDefaultGropedStrategies();
-        
+
+      console.log('strategies', strategies);
+
       if (isEmpty(strategies)) {
         this.logger.warn('No strategies configured for analysis');
         return [];
       }
 
       const results: StrategyAnalysisResult[] = [];
+      const now = new Date();
 
       for (const [interval, items] of Object.entries(strategies)) {
         try {
+          // Перевіряємо чи потрібно виконувати сканування для цього інтервалу
+          if (
+            !this.shouldScanInterval(
+              interval as KlineInterval,
+              updatedPair.startegyScanningIntervalParams,
+              now,
+            )
+          ) {
+            this.logger.debug(
+              `Skipping scan for interval ${interval} - too early`,
+            );
+            continue;
+          }
+
           this.logger.log(`Processing interval: ${interval}`);
           const resultsInterval =
             await this.strategiesHandlerService.getStrategiesAnalysisResults(
@@ -259,13 +295,16 @@ export class FuturesPairScannerService {
             );
           await this.saveSignal(taskId, resultsInterval);
           results.push(...resultsInterval);
+
+          // Оновлюємо час останнього сканування для цього інтервалу
+          await this.updateLastScanTime(taskId, interval as KlineInterval, now);
+
           await this.sleep(1000);
         } catch (error) {
           this.logger.error(`Error processing interval ${interval}:`, error);
         }
-
       }
-      
+
       if (updatedPair) {
         await this.futuresPairModel.findByIdAndUpdate(taskId, {
           $set: { cycleCount: updatedPair.cycleCount + 1 },
@@ -276,6 +315,93 @@ export class FuturesPairScannerService {
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];
+    }
+  }
+
+  /**
+   * Ініціалізує параметри сканування для всіх інтервалів
+   */
+  private async initializeScanningParams(taskId: string): Promise<void> {
+    try {
+      const defaultParams =
+        this.strategiesHandlerService.getStartegyIntervalParams();
+
+      await this.futuresPairModel.findByIdAndUpdate(taskId, {
+        $set: { startegyScanningIntervalParams: defaultParams },
+      });
+
+      this.logger.log(`Initialized scanning parameters for taskId: ${taskId}`);
+    } catch (error) {
+      this.logger.error(
+        `Error initializing scanning parameters for taskId ${taskId}:`,
+        error,
+      );
+    }
+  }
+
+  private shouldScanInterval(
+    interval: KlineInterval,
+    intervalParams: StartegyScanningIntervalParams,
+    currentTime: Date,
+  ): boolean {
+    const intervalConfig = intervalParams[interval];
+
+    if (!intervalConfig) {
+      this.logger.warn(`No configuration found for interval: ${interval}`);
+      return true;
+    }
+
+    if (!intervalConfig.lastSync || intervalConfig.count === 0) {
+      this.logger.debug(`First scan for interval: ${interval}`);
+      return true;
+    }
+
+    const lastSyncTime = new Date(intervalConfig.lastSync);
+    const nextScanTime = addMinutes(
+      lastSyncTime,
+      intervalConfig.frequencyInMinutes,
+    );
+
+    const shouldScan = currentTime >= nextScanTime;
+
+    if (!shouldScan) {
+      const timeUntilNextScan = differenceInMilliseconds(
+        nextScanTime,
+        currentTime,
+      );
+      this.logger.debug(
+        `Interval ${interval} scan skipped. Next scan in ${Math.round(timeUntilNextScan / 1000 / 60)} minutes`,
+      );
+    }
+
+    return shouldScan;
+  }
+
+  /**
+   * Оновлює час останнього сканування для конкретного інтервалу
+   */
+  private async updateLastScanTime(
+    taskId: string,
+    interval: KlineInterval,
+    scanTime: Date,
+  ): Promise<void> {
+    try {
+      await this.futuresPairModel.findByIdAndUpdate(taskId, {
+        $set: {
+          [`startegyScanningIntervalParams.${interval}.lastSync`]:
+            scanTime.toISOString(),
+        },
+        $inc: {
+          [`startegyScanningIntervalParams.${interval}.count`]: 1,
+        },
+      });
+
+      this.logger.debug(`Updated last scan time for interval: ${interval}`);
+    } catch (error) {
+      this.logger.error(
+        `Error updating last scan time for interval ${interval}:`,
+        error,
+      );
     }
   }
 

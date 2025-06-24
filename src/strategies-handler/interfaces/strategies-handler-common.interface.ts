@@ -48,3 +48,11 @@ export interface StrategyParams {
   limit: number;
   minConfidence: number;
 }
+
+export interface StartegyScanningIntervalParams {
+  [key: string]: {
+    lastSync: string;
+    count: 0;
+    frequencyInMinutes: number;
+  };
+}
