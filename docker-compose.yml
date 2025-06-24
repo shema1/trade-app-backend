@@ -10,26 +10,35 @@ services:
       - /app/node_modules
     ports:
       - "3000:3000"
-    command: npm run start:dev
     environment:
       - NODE_ENV=development
-    depends_on:
-      - mongodb
+      - NODE_OPTIONS=--max-old-space-size=8192
+      - UV_THREADPOOL_SIZE=128
     networks:
       - trade-app-network
-
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - trade-app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0'
+          memory: '0'
+        reservations:
+          cpus: '4.0'
+          memory: '4G'
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+    shm_size: '2gb'
+    command: >
+      sh -c "
+        export NODE_OPTIONS='--max-old-space-size=8192 --max-semi-space-size=512';
+        npm run start:dev
+      "
 
 networks:
   trade-app-network:
     driver: bridge
 
 volumes:
-  mongodb_data: 
+  mongodb_data:
+    driver: local 

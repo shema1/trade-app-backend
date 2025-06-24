@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=8192  # 8GB для production
+      - UV_THREADPOOL_SIZE=128  # Більший пул потоків
+    depends_on:
+      - mongodb
+    networks:
+      - trade-app-network
+    # Максимальні налаштування ресурсів для production
+    deploy:
+      resources:
+        limits:
+          cpus: '0'  # Без обмежень CPU
+          memory: 0  # Без обмежень пам'яті
+        reservations:
+          cpus: '2.0'  # Мінімальна резервація CPU
+          memory: 2G  # Мінімальна резервація пам'яті
+    # Налаштування для високої продуктивності
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+    # Налаштування для кластеризації Node.js
+    command: >
+      sh -c "
+        export NODE_OPTIONS='--max-old-space-size=8192 --max-semi-space-size=512';
+        npm run start:prod
+      "
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - trade-app-network
+    # Агресивні налаштування MongoDB для production
+    deploy:
+      resources:
+        limits:
+          cpus: '0'  # Без обмежень CPU
+          memory: 0  # Без обмежень пам'яті
+        reservations:
+          cpus: '4.0'  # Мінімальна резервація CPU
+          memory: 4G  # Мінімальна резервація пам'яті
+    # Оптимізація MongoDB для максимальної продуктивності
+    command: >
+      mongod
+      --wiredTigerCacheSizeGB 4
+      --maxConns 2000
+      --setParameter maxTransactionLockRequestTimeoutMillis=10000
+      --setParameter enableLocalhostAuthBypass=false
+      --setParameter enableTestCommands=0
+      --setParameter diagnosticDataCollectionEnabled=false
+      --setParameter logLevel=1
+      --setParameter operationProfiling.mode=off
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+    restart: unless-stopped
+
+networks:
+  trade-app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data: 
