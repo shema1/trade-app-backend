@@ -8,21 +8,29 @@ export class StrategyResultsAnalyzerController {
     private readonly strategyResultsAnalyzerService: StrategyResultsAnalyzerService,
   ) {}
 
-  @Get('analyze-strategy-results/:id')
+  @Get(':id')
   async analyzeStrategyResults(@Param('id') id: string) {
     return this.strategyResultsAnalyzerService.analyzeStrategyResults(id);
   }
 
+  @Get(':id/strategy/:name')
+  async getStrategyByName(
+    @Param('id') id: string,
+    @Param('name') name: string,
+  ): Promise<StrategyAnalysisResult[]> {
+    return this.strategyResultsAnalyzerService.getStrategyByName(id, name);
+  }
+
   @Post('generate-profit-lost')
   async generateProfitLost(@Body() body: { step: number; maxValue: number }) {
-    return this.strategyResultsAnalyzerService.generateProfitLost(
+    return this.strategyResultsAnalyzerService.generateTradeLevels(
       body.step,
       body.maxValue,
     );
   }
 
-  @Post('check-result-on-profit-lost')
-  async checkResultOnProfitLost(@Body() body: StrategyAnalysisResult) {
-    return this.strategyResultsAnalyzerService.checkResultOnProfitLost(body);
-  }
+  // @Post('check-result-on-profit-lost')
+  // async checkResultOnProfitLost(@Body() body: StrategyAnalysisResult) {
+  //   return this.strategyResultsAnalyzerService.checkResultOnProfitLost(body);
+  // }
 }
