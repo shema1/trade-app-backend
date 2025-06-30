@@ -29,8 +29,8 @@ import { filter } from 'lodash';
 @Injectable()
 export class StrategyResultsAnalyzerService {
   private readonly DEFAULT_STEP = 0.5;
-  private readonly DEFAULT_MAX_VALUE = 5;
-
+  private readonly DEFAULT_MAX_VALUE = 10;
+  private readonly MIN_BALANCE_VALUE = 10;
   constructor(
     @InjectModel(FuturesPair.name)
     private readonly futuresPairModel: Model<FuturesPair>,
@@ -87,10 +87,12 @@ export class StrategyResultsAnalyzerService {
     }
 
     const groupedResults = this.groupResultsByType(results);
+    // return groupedResults;
     // return null;
     // return groupedResults;
-    const test = this.getResults(groupedResults, 80);
-    return test;
+    const test = this.getResults(groupedResults);
+    const bestStrategy = this.pickBestStrategy(test, 3);
+    return bestStrategy;
     // return this.findMostEffectiveStrategies(test);
   }
 
@@ -330,10 +332,7 @@ export class StrategyResultsAnalyzerService {
     }, {} as GroupedResultsByType);
   }
 
-  private getResults(
-    data: GroupedResultsByType,
-    minSuccessRate: number = 80,
-  ): StrategyResults {
+  private getResults(data: GroupedResultsByType): StrategyResults {
     const results: StrategyResults = {};
 
     // Проходимо по всіх типах стратегій
@@ -372,6 +371,7 @@ export class StrategyResultsAnalyzerService {
                     loss: 0,
                     active: 0,
                     successRate: 0,
+                    balance: 0,
                   };
                 }
 
@@ -380,9 +380,11 @@ export class StrategyResultsAnalyzerService {
                 switch (trade.result) {
                   case TradeResult.PROFIT:
                     stats.profit++;
+                    stats.balance += trade.takeProfitPercent;
                     break;
                   case TradeResult.LOSS:
                     stats.loss++;
+                    stats.balance -= trade.stopLossPercent;
                     break;
                   case TradeResult.ACTIVE:
                     stats.active++;
@@ -397,9 +399,19 @@ export class StrategyResultsAnalyzerService {
             });
 
             // Фільтруємо статистику за minSuccessRate
+            // const filteredStats = Object.entries(statsAccumulator).reduce(
+            //   (acc, [label, stats]) => {
+            //     if (stats.successRate >= minSuccessRate) {
+            //       acc[label] = stats;
+            //     }
+            //     return acc;
+            //   },
+            //   {} as TradeStatsAccumulator,
+            // );
+
             const filteredStats = Object.entries(statsAccumulator).reduce(
               (acc, [label, stats]) => {
-                if (stats.successRate >= minSuccessRate) {
+                if (stats.balance >= this.MIN_BALANCE_VALUE) {
                   acc[label] = stats;
                 }
                 return acc;
@@ -519,5 +531,58 @@ export class StrategyResultsAnalyzerService {
     });
 
     return mostEffective;
+  }
+
+  private pickBestStrategy(
+    results: StrategyResults,
+    numOfBest: number,
+  ): StrategyResults {
+    const bestStrategy: StrategyResults = {};
+
+    // Проходимо по всіх інтервалах
+    Object.entries(results).forEach(([interval, types]) => {
+      bestStrategy[interval] = {};
+
+      // Проходимо по всіх типах стратегій
+      Object.entries(types).forEach(([strategyType, strategies]) => {
+        bestStrategy[interval][strategyType] = {};
+
+        // Проходимо по всіх стратегіях
+        Object.entries(strategies).forEach(([strategyName, labels]) => {
+          // Сортуємо всі рівні за балансом (спочатку найвищий)
+          const sortedLabels = Object.entries(labels).sort(
+            ([, statsA], [, statsB]) => {
+              return statsB.balance - statsA.balance;
+            },
+          );
+
+          // Беремо тільки найкращі numOfBest результатів
+          const bestLabels = sortedLabels.slice(0, numOfBest);
+
+          // Створюємо об'єкт з найкращими результатами
+          const bestResults = bestLabels.reduce((acc, [label, stats]) => {
+            acc[label] = stats;
+            return acc;
+          }, {} as TradeStatsAccumulator);
+
+          // Додаємо до результатів, якщо є хоча б один результат
+          if (Object.keys(bestResults).length > 0) {
+            bestStrategy[interval][strategyType][strategyName] = bestResults;
+          }
+        });
+
+        // Видаляємо порожні типи стратегій
+        if (Object.keys(bestStrategy[interval][strategyType]).length === 0) {
+          delete bestStrategy[interval][strategyType];
+        }
+      });
+
+      // Видаляємо порожні інтервали
+      if (Object.keys(bestStrategy[interval]).length === 0) {
+        delete bestStrategy[interval];
+      }
+    });
+
+    return bestStrategy;
   }
 }

@@ -106,6 +106,7 @@ export interface TradeStats {
   loss: number;
   active: number;
   successRate: number;
+  balance?: number;
 }
 
 export interface StrategyResults {
