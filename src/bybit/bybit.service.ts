@@ -1,16 +1,30 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { RestClientV5, CategoryV5 } from 'bybit-api';
+import {
+  RestClientV5,
+  CategoryV5,
+  OrderParamsV5,
+  OrderResultV5,
+  APIResponseV3WithTime,
+} from 'bybit-api';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import {
+  FutureOrderError,
   KlineDataItem,
   KlineDataItemBatch,
+  LimitOrderParams,
 } from './interfaces/responses.interface';
 import { reverse } from 'lodash';
 import { GetKlineDto, KlineCategory, KlineInterval } from './dto/get-kline.dto';
 import { GetKlineBatchDto } from './dto/get-kline-batch.dto';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { AnalysisResultRecommendation } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
+import { webcrypto } from 'crypto';
 
+if (typeof global.crypto === 'undefined') {
+  global.crypto = webcrypto as any;
+}
 @Injectable()
 export class BybitService {
   private readonly client: RestClientV5;
@@ -213,5 +227,96 @@ export class BybitService {
     //   interval: '15',
     //   limit: 100,
     // });
+  }
+
+  async openLimitOrder(
+    data: LimitOrderParams,
+  ): Promise<APIResponseV3WithTime<OrderResultV5> | FutureOrderError> {
+    try {
+      const orderLinkId = `limit-${data.symbol}-${Date.now()}`;
+
+      return await this.client.submitOrder({
+        orderLinkId,
+        category: 'linear', // 'linear' для USDT perpetual
+        symbol: data.symbol,
+        side: data.side, // або 'Sell'
+        orderType: 'Limit',
+        qty: data.qty, // кількість
+        price: data.price, // ціна покупки
+        timeInForce: 'GTC', // Good Till Cancelled
+        takeProfit: data.takeProfit,
+        stopLoss: data.stopLoss,
+        positionIdx: data.side === 'Buy' ? 1 : 2,
+        reduceOnly: false, // чи закриває частину/всю позицію
+      });
+    } catch (error) {
+      console.error('Error creating order:', error);
+      return {
+        testError: 'testError',
+        error: error,
+      };
+    }
+  }
+
+  async openFutureOrder(
+    createOrderDto: CreateOrderDto,
+  ): Promise<APIResponseV3WithTime<OrderResultV5> | FutureOrderError> {
+    try {
+      const orderLinkId = `${createOrderDto.symbol}-${Date.now()}`;
+
+      console.log('woork2');
+      const side =
+        createOrderDto.side === AnalysisResultRecommendation.BUY
+          ? 'Buy'
+          : 'Sell';
+
+      const targetPrices =
+        side === 'Buy'
+          ? {
+              profit:
+                createOrderDto.price * (1 + createOrderDto.takeProfit / 100),
+              loss: createOrderDto.price * (1 - createOrderDto.stopLoss / 100),
+            }
+          : {
+              profit:
+                createOrderDto.price * (1 - createOrderDto.takeProfit / 100),
+              loss: createOrderDto.price * (1 + createOrderDto.stopLoss / 100),
+            };
+
+      const qty = Number(
+        (
+          Math.round(
+            (createOrderDto.betSize / Number(createOrderDto.price)) * 100000,
+          ) / 100000
+        ).toFixed(0),
+      );
+
+      const data: OrderParamsV5 = {
+        category: 'linear',
+        orderType: 'Market',
+        side,
+        symbol: createOrderDto.symbol,
+        qty: qty.toString(),
+        orderLinkId,
+        takeProfit: targetPrices.profit.toString(),
+        stopLoss: targetPrices.loss.toString(),
+        positionIdx: side === 'Buy' ? 1 : 2,
+      };
+
+      // if (createOrderDto.price) {
+      //   data.price = createOrderDto.price.toString();
+      // }
+
+      const response = await this.client.submitOrder(data);
+
+      console.log('response', response);
+      return response;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      return {
+        testError: 'testError',
+        error: error,
+      };
+    }
   }
 }

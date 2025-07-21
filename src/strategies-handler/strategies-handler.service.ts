@@ -16,6 +16,7 @@ import { MomentumEmaStrategyItem } from 'src/momentum-ema-cross-strategy/interfa
 import { MomentumEmaCrossStrategyService } from 'src/momentum-ema-cross-strategy/momentum-ema-cross-strategy.service';
 import { VolumeStrategyService } from 'src/volume-strategy/volume-strategy.service';
 import { VolumeStrategyItem } from 'src/volume-strategy/interfaces/volume-srategy';
+import { VOLUME_DEFAULT_STRATEGY_PARAMS_V1 } from 'src/volume-strategy/constants/volume-v1-params';
 
 @Injectable()
 export class StrategiesHandlerService {
@@ -29,60 +30,57 @@ export class StrategiesHandlerService {
 
   getStartegyIntervalParams(): StartegyScanningIntervalParams {
     return {
-      [KlineInterval.ONE_MINUTE]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 1,
-      },
+      // [KlineInterval.ONE_MINUTE]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 1,
+      // },
       [KlineInterval.FIVE_MINUTES]: {
         lastSync: '',
         count: 0,
         frequencyInMinutes: 1,
       },
-      [KlineInterval.FIFTEEN_MINUTES]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 2,
-      },
-      [KlineInterval.THIRTY_MINUTES]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 5,
-      },
-      [KlineInterval.ONE_HOUR]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 10,
-      },
-      [KlineInterval.FOUR_HOURS]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 30,
-      },
+      // [KlineInterval.FIFTEEN_MINUTES]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 2,
+      // },
+      // [KlineInterval.THIRTY_MINUTES]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 5,
+      // },
+      // [KlineInterval.ONE_HOUR]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 10,
+      // },
+      // [KlineInterval.FOUR_HOURS]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 30,
+      // },
       [KlineInterval.ONE_DAY]: {
         lastSync: '',
         count: 0,
         frequencyInMinutes: 60,
       },
-      [KlineInterval.ONE_WEEK]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 60,
-      },
-      [KlineInterval.ONE_MONTH]: {
-        lastSync: '',
-        count: 0,
-        frequencyInMinutes: 60,
-      },
+      // [KlineInterval.ONE_WEEK]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 60,
+      // },
+      // [KlineInterval.ONE_MONTH]: {
+      //   lastSync: '',
+      //   count: 0,
+      //   frequencyInMinutes: 60,
+      // },
     };
   }
 
   getDefaultGropedStrategies(): GroupedStrategies {
     try {
-      const strategies = [
-        ...DEFAULT_STRATEGY_PARAMS_TEST,
-        ...VOLUME_DEFAULT_STRATEGY_PARAMS_TEST,
-      ];
+      const strategies = VOLUME_DEFAULT_STRATEGY_PARAMS_V1;
 
       if (!strategies?.length) {
         this.logger.warn('No strategies configured');
@@ -118,8 +116,8 @@ export class StrategiesHandlerService {
           return null;
         }
 
-        return await this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy(
-          {
+        const momentumEmaCrossResult =
+          await this.momentumEmaCrossStrategyService.momentumEmaCrossStrategy({
             symbol: kline.symbol,
             interval: item.params.interval,
             kline: kline.list,
@@ -135,8 +133,11 @@ export class StrategiesHandlerService {
             minConfidence: params.minConfidence,
             category: kline.category as KlineCategory,
             name: params.name,
-          },
-        );
+          });
+        return {
+          ...momentumEmaCrossResult,
+          orderParams: item.orderParams,
+        };
       } else if (item.strategyType === StrategyType.VOLUME_ANALYSIS) {
         const params = item.params as VolumeStrategyItem;
         if (!params) {
@@ -144,7 +145,7 @@ export class StrategiesHandlerService {
           return null;
         }
 
-        return await this.volumeStrategyService.analyzeVolume({
+        const volumeResult = await this.volumeStrategyService.analyzeVolume({
           name: params.name,
           symbol: kline.symbol,
           interval: item.params.interval,
@@ -154,6 +155,11 @@ export class StrategiesHandlerService {
           minConfidence: params.minConfidence,
           category: kline.category as KlineCategory,
         });
+
+        return {
+          ...volumeResult,
+          orderParams: item.orderParams,
+        };
       }
 
       this.logger.warn(`Unknown strategy type: ${item.strategyType}`);

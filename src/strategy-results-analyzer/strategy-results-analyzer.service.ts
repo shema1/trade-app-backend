@@ -30,7 +30,7 @@ import { filter } from 'lodash';
 export class StrategyResultsAnalyzerService {
   private readonly DEFAULT_STEP = 0.5;
   private readonly DEFAULT_MAX_VALUE = 10;
-  private readonly MIN_BALANCE_VALUE = 10;
+  private readonly MIN_BALANCE_VALUE = -10;
   constructor(
     @InjectModel(FuturesPair.name)
     private readonly futuresPairModel: Model<FuturesPair>,
@@ -80,6 +80,7 @@ export class StrategyResultsAnalyzerService {
             (result): result is StrategyAnalysisResponse => result !== null,
           ),
         );
+        await this.sleep(10000);
       } catch (error) {
         console.error('Помилка при обробці батчу:', error);
         continue;
@@ -584,5 +585,9 @@ export class StrategyResultsAnalyzerService {
     });
 
     return bestStrategy;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

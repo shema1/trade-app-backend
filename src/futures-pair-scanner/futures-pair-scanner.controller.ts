@@ -1,8 +1,8 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { FuturesPairScannerService } from './futures-pair-scanner.service';
 import { StartScanningDto } from './dto/start-scanning.dto';
-import { FuturesPair } from './schemas/futures-pair.schema';
+import { FuturesPair, FuturesPairStatus } from './schemas/futures-pair.schema';
 
 @ApiTags('Futures Pair Scanner')
 @Controller('futures-pair-scanner')
@@ -76,5 +76,115 @@ export class FuturesPairScannerController {
     @Body() data: StartScanningDto,
   ): Promise<FuturesPair | null> {
     return this.futuresPairScannerService.startScanning(data);
+  }
+
+  @Get('get-future-pair-by-id/:id')
+  async getFuturePairById(
+    @Param('id') id: string,
+  ): Promise<FuturesPair | null> {
+    return this.futuresPairScannerService.getFuturePairById(id);
+  }
+
+  @Post('resume-scanning/:id')
+  @ApiOperation({
+    summary: "Продовжити сканування ф'ючерсної пари",
+    description: `
+    Продовжує сканування ф'ючерсної пари, яка була раніше зупинена.
+    
+    Умови для продовження:
+    - Запис повинен існувати в базі даних
+    - Статус повинен бути STOPPED
+    - Сканування не повинно бути вже активним
+    
+    Після успішного продовження:
+    - Статус змінюється на ACTIVE
+    - Запускається безперервне сканування
+    - Оновлюється час останнього сканування
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Сканування успішно продовжено',
+    type: FuturesPair,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Неможливо продовжити сканування',
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Ф'ючерсна пара не знайдена",
+  })
+  async resumeScanning(@Param('id') id: string): Promise<FuturesPair | null> {
+    return this.futuresPairScannerService.resumeScanning(id);
+  }
+
+  @Post('stop-scanning/:id')
+  @ApiOperation({
+    summary: "Зупинити сканування ф'ючерсної пари",
+    description: `
+    Зупиняє активне сканування ф'ючерсної пари.
+    
+    Після зупинки:
+    - Статус змінюється на STOPPED
+    - Задача видаляється з активних сканувань
+    - Оновлюється час останнього сканування
+    - Сканування можна продовжити пізніше
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Сканування успішно зупинено',
+    type: FuturesPair,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Сканування не активне',
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Ф'ючерсна пара не знайдена",
+  })
+  async stopScanning(@Param('id') id: string): Promise<FuturesPair | null> {
+    return this.futuresPairScannerService.stopScanning(id);
+  }
+
+  @Get('scanning-status/:id')
+  @ApiOperation({
+    summary: "Отримати статус сканування ф'ючерсної пари",
+    description: `
+    Повертає поточний статус сканування ф'ючерсної пари.
+    
+    Інформація включає:
+    - isActive: чи активне сканування в пам'яті
+    - status: статус в базі даних (ACTIVE/STOPPED)
+    - lastScanTime: час останнього сканування
+    - cycleCount: кількість виконаних циклів сканування
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Статус сканування отримано',
+    schema: {
+      type: 'object',
+      properties: {
+        isActive: { type: 'boolean' },
+        status: { type: 'string', enum: ['ACTIVE', 'STOPPED'] },
+        lastScanTime: { type: 'string', format: 'date-time' },
+        cycleCount: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Ф'ючерсна пара не знайдена",
+  })
+  async getScanningStatus(@Param('id') id: string): Promise<{
+    isActive: boolean;
+    status: FuturesPairStatus;
+    lastScanTime?: Date;
+    cycleCount: number;
+  } | null> {
+    return this.futuresPairScannerService.getScanningStatus(id);
   }
 }

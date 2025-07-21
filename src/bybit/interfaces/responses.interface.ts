@@ -1,3 +1,4 @@
+import { OrderSideV5 } from 'bybit-api';
 import { KlineCategory, KlineInterval } from '../dto/get-kline.dto';
 
 export interface KlineDataItem {
@@ -15,4 +16,18 @@ export interface KlineDataItemBatch {
   limit: number;
   list: KlineDataItem[];
   category: KlineCategory;
+}
+
+export interface FutureOrderError {
+  testError: string;
+  error: any;
+}
+
+export interface LimitOrderParams {
+  symbol: string;
+  side: OrderSideV5;
+  qty: string;
+  price: string;
+  stopLoss: string;
+  takeProfit: string;
 }

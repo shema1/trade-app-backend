@@ -17,9 +17,16 @@ export enum AnalysisResultRecommendation {
   HOLD = 'HOLD',
 }
 
+export interface StrategyOrderParams {
+  takeProfit: number;
+  stopLoss: number;
+  betSize: number;
+}
+
 export interface Strategy {
   strategyType: StrategyType;
   params: any; //MomentumEmaStrategyItem | VolumeStrategyItem
+  orderParams?: StrategyOrderParams;
 }
 
 export interface GroupedStrategies {
@@ -37,6 +44,7 @@ export interface StrategyAnalysisResult {
   signals: Signal[];
   interval: KlineInterval;
   strategyDetails?: any; // Деталі конкретної стратегії
+  orderParams?: StrategyOrderParams;
   // telegramMessage?: TelegramMessage;
   // lostProfitInfo?: LostProfitInfo;
   // done?: boolean;

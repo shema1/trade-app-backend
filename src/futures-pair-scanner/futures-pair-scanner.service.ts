@@ -14,7 +14,11 @@ import {
   AnalysisResultRecommendation,
   StrategyAnalysisResult,
   StartegyScanningIntervalParams,
+  StrategyType,
 } from 'src/strategies-handler/interfaces/strategies-handler-common.interface';
+import { CreateOrderDto } from 'src/bybit/dto/create-order.dto';
+import { LimitOrderParams } from 'src/bybit/interfaces/responses.interface';
+import { OrderSideV5 } from 'bybit-api';
 
 @Injectable()
 export class FuturesPairScannerService {
@@ -33,6 +37,76 @@ export class FuturesPairScannerService {
     private readonly volumeStrategyService: VolumeStrategyService,
     private readonly strategiesHandlerService: StrategiesHandlerService,
   ) {}
+
+  async getFuturePairById(id: string): Promise<FuturesPair | null> {
+    // const test = [
+    //   {
+    //     symbol: 'BERAUSDT',
+    //     name: 'Volume Swing 5m',
+    //     strategyType: 'VOLUME_ANALYSIS',
+    //     recommendation: 'BUY',
+    //     confidence: 0.7027481415088985,
+    //     currentPrice: 1.875,
+    //     interval: '5',
+    //     signals: [
+    //       {
+    //         name: 'Volume Spike',
+    //         value: 5.098618839669534,
+    //         interpretation: 'Volume 5.10x above average',
+    //       },
+    //       {
+    //         name: 'OBV Trend',
+    //         value: 2029595,
+    //         interpretation: 'Accumulation/Distribution pattern detected',
+    //       },
+    //       {
+    //         name: 'Price Action',
+    //         value: 0.013740707544492126,
+    //         interpretation: 'bullish momentum',
+    //       },
+    //       {
+    //         name: 'RSI',
+    //         value: 78.7717043601553,
+    //         interpretation: 'RSI: 78.77',
+    //       },
+    //       {
+    //         name: 'VWAP',
+    //         value: 1.770802508033378,
+    //         interpretation: 'VWAP: 1.77',
+    //       },
+    //       {
+    //         name: 'Volume',
+    //         value: 261823,
+    //         interpretation: 'Volume: 261823.00',
+    //       },
+    //       {
+    //         name: 'Average Volume',
+    //         value: 51351.75,
+    //         interpretation: 'Average volume: 51351.75',
+    //       },
+    //     ],
+    //     timestamp: 1751282924497,
+    //     strategyDetails: {
+    //       name: 'Volume Swing 5m',
+    //       symbol: 'BERAUSDT',
+    //       interval: '5',
+    //       limit: 200,
+    //       minVolumeRatio: 3,
+    //       minConfidence: 0.7,
+    //       category: 'linear',
+    //     },
+    //     orderParams: {
+    //       takeProfit: 3,
+    //       stopLoss: 9,
+    //       betSize: 5,
+    //     },
+    //   },
+    // ] as StrategyAnalysisResult[];
+
+    // await this.openOrdersBatch(test);
+
+    return this.futuresPairModel.findById(id);
+  }
 
   async startScanning(data: StartScanningDto): Promise<FuturesPair | null> {
     try {
@@ -58,11 +132,210 @@ export class FuturesPairScannerService {
         `Started scanning for ${data.name} with taskId: ${taskId}`,
       );
 
+      this.openOrdersBatch([
+        {
+          symbol: 'EPTUSDT',
+          name: 'Volume Swing 5m',
+          strategyType: StrategyType.VOLUME_ANALYSIS,
+          recommendation: AnalysisResultRecommendation.BUY,
+          confidence: 0.7036889762948331,
+          currentPrice: 0.004237,
+          interval: KlineInterval.FIVE_MINUTES,
+          signals: [
+            {
+              name: 'Volume Spike',
+              value: 5.514857117301698,
+              interpretation: 'Volume 5.51x above average',
+            },
+            {
+              name: 'OBV Trend',
+              value: 53734110,
+              interpretation: 'Accumulation/Distribution pattern detected',
+            },
+            {
+              name: 'Price Action',
+              value: 0.01844488147416526,
+              interpretation: 'bullish momentum',
+            },
+            {
+              name: 'RSI',
+              value: 77.20472126418811,
+              interpretation: 'RSI: 77.20',
+            },
+            {
+              name: 'VWAP',
+              value: 0.004477299882730757,
+              interpretation: 'VWAP: 0.00',
+            },
+            {
+              name: 'Volume',
+              value: 13194610,
+              interpretation: 'Volume: 13194610.00',
+            },
+            {
+              name: 'Average Volume',
+              value: 2392557,
+              interpretation: 'Average volume: 2392557.00',
+            },
+          ],
+          timestamp: 1751287749005,
+          strategyDetails: {
+            name: 'Volume Swing 5m',
+            symbol: 'EPTUSDT',
+            interval: '5',
+            limit: 200,
+            minVolumeRatio: 3,
+            minConfidence: 0.7,
+            category: 'linear',
+          },
+          orderParams: {
+            takeProfit: 5,
+            stopLoss: 9,
+            betSize: 5,
+          },
+        },
+      ]);
       this.runContinuousScanning(futuresPair);
 
       return futuresPair;
     } catch (error) {
       this.logger.error(`Error starting scanning for ${data.name}:`, error);
+      return null;
+    }
+  }
+
+  async resumeScanning(id: string): Promise<FuturesPair | null> {
+    try {
+      const futuresPair = await this.futuresPairModel.findById(id);
+
+      if (!futuresPair) {
+        this.logger.error(`Futures pair not found with id: ${id}`);
+        return null;
+      }
+
+      const taskId = futuresPair._id.toString();
+
+      // Перевіряємо чи сканування вже запущене
+      if (this.pairScannerTaskMap.has(taskId)) {
+        this.logger.warn(`Scanning is already active for taskId: ${taskId}`);
+        return futuresPair;
+      }
+
+      // Перевіряємо чи статус дозволяє продовжити сканування
+      // if (futuresPair.status !== FuturesPairStatus.STOPPED) {
+      //   this.logger.warn(
+      //     `Cannot resume scanning for taskId: ${taskId}. Status is: ${futuresPair.status}`,
+      //   );
+      //   return futuresPair;
+      // }
+
+      // Оновлюємо статус на ACTIVE
+      const updatedPair = await this.futuresPairModel.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            status: FuturesPairStatus.ACTIVE,
+            lastScanTime: new Date(),
+          },
+        },
+        { new: true },
+      );
+
+      if (!updatedPair) {
+        this.logger.error(`Failed to update futures pair status for id: ${id}`);
+        return null;
+      }
+
+      // Додаємо задачу до карти активних сканувань
+      this.pairScannerTaskMap.set(taskId, true);
+      this.logger.log(
+        `Resumed scanning for ${updatedPair.name} with taskId: ${taskId}`,
+      );
+
+      // Запускаємо безперервне сканування
+      this.runContinuousScanning(updatedPair);
+
+      return updatedPair;
+    } catch (error) {
+      this.logger.error(`Error resuming scanning for id ${id}:`, error);
+      return null;
+    }
+  }
+
+  async stopScanning(id: string): Promise<FuturesPair | null> {
+    try {
+      const futuresPair = await this.futuresPairModel.findById(id);
+
+      if (!futuresPair) {
+        this.logger.error(`Futures pair not found with id: ${id}`);
+        return null;
+      }
+
+      const taskId = futuresPair._id.toString();
+
+      // Перевіряємо чи сканування активне
+      if (!this.pairScannerTaskMap.has(taskId)) {
+        this.logger.warn(`Scanning is not active for taskId: ${taskId}`);
+        return futuresPair;
+      }
+
+      // Видаляємо задачу з карти активних сканувань
+      this.pairScannerTaskMap.delete(taskId);
+      this.scanInProgress.delete(taskId);
+
+      // Оновлюємо статус на STOPPED
+      const updatedPair = await this.futuresPairModel.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            status: FuturesPairStatus.STOPPED,
+            lastScanTime: new Date(),
+          },
+        },
+        { new: true },
+      );
+
+      if (!updatedPair) {
+        this.logger.error(`Failed to update futures pair status for id: ${id}`);
+        return null;
+      }
+
+      this.logger.log(
+        `Stopped scanning for ${updatedPair.name} with taskId: ${taskId}`,
+      );
+
+      return updatedPair;
+    } catch (error) {
+      this.logger.error(`Error stopping scanning for id ${id}:`, error);
+      return null;
+    }
+  }
+
+  async getScanningStatus(id: string): Promise<{
+    isActive: boolean;
+    status: FuturesPairStatus;
+    lastScanTime?: Date;
+    cycleCount: number;
+  } | null> {
+    try {
+      const futuresPair = await this.futuresPairModel.findById(id);
+
+      if (!futuresPair) {
+        this.logger.error(`Futures pair not found with id: ${id}`);
+        return null;
+      }
+
+      const taskId = futuresPair._id.toString();
+      const isActive = this.pairScannerTaskMap.has(taskId);
+
+      return {
+        isActive,
+        status: futuresPair.status,
+        lastScanTime: futuresPair.lastScanTime,
+        cycleCount: futuresPair.cycleCount,
+      };
+    } catch (error) {
+      this.logger.error(`Error getting scanning status for id ${id}:`, error);
       return null;
     }
   }
@@ -108,7 +381,7 @@ export class FuturesPairScannerService {
   async saveSignal(
     taskId: string,
     signalsData: StrategyAnalysisResult[],
-  ): Promise<void> {
+  ): Promise<StrategyAnalysisResult[]> {
     try {
       const signals = signalsData.filter(
         (item) => item.recommendation !== AnalysisResultRecommendation.HOLD,
@@ -116,13 +389,13 @@ export class FuturesPairScannerService {
 
       if (!taskId || !signals?.length) {
         this.logger.warn('Invalid input parameters for saveSignal');
-        return;
+        return [];
       }
 
       const futuresPair = await this.futuresPairModel.findById(taskId);
       if (!futuresPair) {
         this.logger.warn(`Futures pair not found for taskId: ${taskId}`);
-        return;
+        return [];
       }
 
       const results: StrategyAnalysisResult[] = [];
@@ -155,6 +428,7 @@ export class FuturesPairScannerService {
       }
 
       await this.saveResultsToDatabase(taskId, results, now);
+      return results;
     } catch (error) {
       this.logger.error(`Error in saveSignal for taskId ${taskId}:`, error);
     }
@@ -261,8 +535,6 @@ export class FuturesPairScannerService {
       const strategies =
         this.strategiesHandlerService.getDefaultGropedStrategies();
 
-      console.log('strategies', strategies);
-
       if (isEmpty(strategies)) {
         this.logger.warn('No strategies configured for analysis');
         return [];
@@ -284,6 +556,7 @@ export class FuturesPairScannerService {
             this.logger.debug(
               `Skipping scan for interval ${interval} - too early`,
             );
+            await this.sleep(20000);
             continue;
           }
 
@@ -293,8 +566,14 @@ export class FuturesPairScannerService {
               interval as KlineInterval,
               items,
             );
-          await this.saveSignal(taskId, resultsInterval);
-          results.push(...resultsInterval);
+
+          if (resultsInterval.length > 0) {
+            const savedResults = await this.saveSignal(taskId, resultsInterval);
+            results.push(...savedResults);
+            if (savedResults.length > 0) {
+              await this.openOrdersBatch(savedResults);
+            }
+          }
 
           // Оновлюємо час останнього сканування для цього інтервалу
           await this.updateLastScanTime(taskId, interval as KlineInterval, now);
@@ -315,27 +594,6 @@ export class FuturesPairScannerService {
     } catch (error) {
       this.logger.error('Error in runAnalysis:', error);
       return [];
-    }
-  }
-
-  /**
-   * Ініціалізує параметри сканування для всіх інтервалів
-   */
-  private async initializeScanningParams(taskId: string): Promise<void> {
-    try {
-      const defaultParams =
-        this.strategiesHandlerService.getStartegyIntervalParams();
-
-      await this.futuresPairModel.findByIdAndUpdate(taskId, {
-        $set: { startegyScanningIntervalParams: defaultParams },
-      });
-
-      this.logger.log(`Initialized scanning parameters for taskId: ${taskId}`);
-    } catch (error) {
-      this.logger.error(
-        `Error initializing scanning parameters for taskId ${taskId}:`,
-        error,
-      );
     }
   }
 
@@ -413,5 +671,94 @@ export class FuturesPairScannerService {
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // private async openOrdersBatch(
+  //   results: StrategyAnalysisResult[],
+  // ): Promise<void> {
+  //   try {
+  //     // console.log('results', results);
+
+  //     const createOrderDtos: CreateOrderDto[] = results.map((result) => ({
+  //       symbol: result.symbol,
+  //       side: result.recommendation,
+  //       price: result.currentPrice,
+  //       leverage: 10,
+  //       takeProfit: result.orderParams.takeProfit,
+  //       stopLoss: result.orderParams.stopLoss,
+  //       betSize: result.orderParams.betSize,
+  //     }));
+
+  //     for (const orderDto of createOrderDtos) {
+  //       try {
+  //         console.log('woooooork');
+  //         await this.bybitService.openFutureOrder(orderDto);
+  //       } catch (error) {
+  //         this.logger.error(
+  //           `Error opening order for ${orderDto.symbol}:`,
+  //           error,
+  //         );
+  //       }
+  //     }
+  //   } catch (error) {
+  //     this.logger.error('Error in openOrdersBatch:', error);
+  //   }
+  // }
+
+  private async openOrdersBatch(
+    results: StrategyAnalysisResult[],
+  ): Promise<void> {
+    try {
+      // console.log('results', results);
+
+      const createOrderDtos: LimitOrderParams[] = results.map((result) => {
+        const side =
+          result.recommendation === AnalysisResultRecommendation.BUY
+            ? 'Sell'
+            : 'Buy';
+
+        const price = result.currentPrice * 1.004;
+        const targetPrices =
+          side === 'Buy'
+            ? {
+                profit: price * (1 + result.orderParams.takeProfit / 100),
+                loss: price * (1 - result.orderParams.stopLoss / 100),
+              }
+            : {
+                profit: price * (1 - result.orderParams.takeProfit / 100),
+                loss: price * (1 + result.orderParams.stopLoss / 100),
+              };
+
+        const qty = Number(
+          (
+            Math.round((result.orderParams.betSize / Number(price)) * 100000) /
+            100000
+          ).toFixed(0),
+        );
+
+        return {
+          symbol: result.symbol,
+          side: side as OrderSideV5,
+          qty: qty.toString(),
+          price: price.toString(),
+          takeProfit: targetPrices.profit.toString(),
+          stopLoss: targetPrices.loss.toString(),
+        };
+      });
+
+      for (const orderDto of createOrderDtos) {
+        try {
+          console.log('woooooork');
+          await this.bybitService.openLimitOrder(orderDto);
+        } catch (error) {
+          this.logger.error(
+            `Error opening order for ${orderDto.symbol}:`,
+            error,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error in openOrdersBatch:', error);
+    }
   }
 }
